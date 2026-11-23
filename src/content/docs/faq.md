@@ -1,0 +1,175 @@
+---
+title: FAQ
+description: Відповіді на часті та технічні запитання щодо сумісності з Paper, реалізації Kill-Switches, безпеки класлоадерів, світів і швидкого старту.
+sidebar:
+  hidden: true
+---
+
+## Чи підтримується Paper та Bukkit API?
+
+**Так, усі плагіни під Paper, Spigot і Bukkit працюють у звичному режимі.**
+
+- Жоден метод публічного API Bukkit, Spigot або Paper не видалявся і не змінював сигнатуру.
+- Внутрішні розширення `apis-api` додають лише константу бренду `ServerBuildInfo.BRAND_APIS_ID` (`apismc:apis`), два `default`-методи для індексації пакетів і внутрішній `PluginPackageIndex`.
+- Метод `ServerBuildInfo#isBrandCompatible(Key)` повертає `true` як для `apismc:apis`, так і для `papermc:paper`, тож плагіни, які перевіряють бренд Paper, проходять цю перевірку без змін.
+
+:::note
+Якщо ви використовуєте старі плагіни (до Minecraft `1.20.5`), залишайте `compatibility.legacy.plugin-bytecode-rerouting: true` у `configs/apis.yml`. Для сучасних плагінів цей параметр можна вимкнути, щоб прискорити запуск.
+:::
+
+## Куди поділися JAR-файли з папки `plugins/`?
+
+В Apis код плагінів і їхні робочі дані розділені по двох каталогах:
+
+- **`addons/`** (`--addons-dir`) - сюди потрібно класти `.jar`-файли плагінів. Тека автооновлень також перенесена сюди та має шлях `addons/update/`.
+- **`plugins/`** (`-P` / `--plugins`) - тут зберігаються лише теки з конфігураціями та базами даних плагінів (`plugins/<PluginName>/`). **JAR-файли, залишені в `plugins/`, ядро не завантажує.**
+
+Детальніше про всі директорії та CLI-прапорці читайте в розділі [Структура каталогів](../getting-started/directory-structure/).
+
+## Чи потрібен плагін на кшталт Multiverse-Core для керування світами?
+
+Ні, сторонні плагіни для світів не потрібні. За замовчуванням увімкнено режим `dimensions.mode: standalone`, у якому ядро самостійно виконує роль менеджера світів:
+
+:::caution[Генерація нових чанків у режимі Standalone]
+У режимі `standalone` генератор абсолютно для всіх світів примусово замінюється на **Void** (порожнечу).
+
+* **Усі наявні збережені чанки залишаються цілими:** будівлі та рельєф із перенесених файлів `region/*.mca` завантажуються без змін.
+* **Будь-які нові (ще не згенеровані) чанки генеруватимуться порожніми.**
+* Якщо вам потрібна повноцінна ванільна генерація ландшафту та біомів для нових територій, перемкніть параметр у `configs/apis.yml` на `dimensions.mode: vanilla`.
+:::
+
+1. **Без зайвих плагінів:** Multiverse-Core чи подібні рішення більше не потрібні - завантаження, вивантаження та телепортація працюють через вбудовані команди `/world` і `/tpworld`.
+2. **Перенесення світів із Paper:** якщо у вас уже є готові карти, просто перемістіть їхні каталоги з кореня сервера в єдину папку `worlds/` (наприклад, `worlds/hub/`, `worlds/arena_1/`).
+3. **Автоматичне завантаження:** під час старту сервер автоматично сканує каталог `worlds/` і підключає всі знайдені світи з оптимізованим Void-генератором.
+4. **Індивідуальні налаштування (`world.yml`):** для кожного світу автоматично створюється `worlds/<назва_світу>/world.yml`. Зверніть увагу, що координати спавну з `level.dat` не зчитуються - точка спавну, примусова телепортація (`force-spawn`) та ігровий режим беруться саме з `world.yml` (їх можна в будь-який момент змінити вручну або командою `/setworldspawn`).
+
+## Як повернути стандартну поведінку та папки Paper?
+
+У файлі `configs/apis.yml` змініть режим світів на `vanilla`:
+
+```yaml
+dimensions:
+  mode: vanilla
+```
+
+А якщо потрібно повернути конфігурації та світи в корінь сервера, передайте відповідні CLI-прапорці:
+
+```bash
+java --enable-native-access=ALL-UNNAMED -jar apis.jar \
+  --configs-dir . \
+  --worlds-dir . \
+  -c server.properties \
+  -b bukkit.yml \
+  -C commands.yml \
+  -S spigot.yml \
+  --paper paper.yml \
+  --nogui
+```
+
+:::caution
+Навіть якщо перенести конфігурації та світи в корінь, JAR-файли плагінів однаково завантажуватимуться з папки `--addons-dir` (за замовчуванням `addons/`).
+:::
+
+## Як саме реалізовано вимкнення функцій?
+
+Вимкнення працює на **двох рівнях**, без рефлексії, блокувань і зайвих алокацій пам'яті:
+
+1. **Пропуск на етапі завантаження (Pre-Disk Pruning):** стартові та реєстрові вимикачі (`startup.datafixers`, `gameplay.recipes`, `gameplay.advancements`, `gameplay.loot-tables`, `chunks.structures`, `chunks.biome-decoration`, `startup.test-registries`) спрацьовують **до** читання файлів із диска. Зокрема, `ResourceManagerRegistryLoadTask` і `TagLoader` взагалі пропускають `listMatchingResources` та JSON-парсинг, а `DataFixers` не будує сотні схем міграції.
+2. **Гарячі цикли тіку (O(1) бітова маска `FeatureRegistry`):** усі 77 булевих прапорців з `configs/apis.yml` під час старту пакуються у два примітивні `volatile long` слова (`disabledMask0` і `disabledMask1`). Перевірка під час тіку - це одна побітова операція `(disabledMask0 & feature.bit) != 0L`, без `HashMap`, `synchronized` або звернень до YAML.
+
+Детальніше про механізм дивіться в розділі [Вимкнення систем (Kill-Switches)](../configuration/kill-switches/).
+
+## Чи не впадуть плагіни з `NullPointerException`, якщо вимкнути рецепти, лут, DFU або AI?
+
+**Ні.** В Apis діє контракт **non-null fallback-об'єктів**, а не обнулення полів:
+
+- **AI мобів (`entities.ai.enabled: false`):** у `Mob` та `LivingEntity` об'єкти `goalSelector`, `targetSelector`, `navigation`, `sensing` і `brain` залишаються проініціалізованими порожніми та безпечними структурами - пропускається лише реєстрація цілей і виконання тіків.
+- **Обрізані реєстри (`recipes`, `advancements`, `loot-tables`, `structures`):** `RecipeManager` ініціалізується через `RecipeMap.EMPTY` і `List.of()`, `ServerAdvancementManager` - через `ImmutableMap.of()` і `new AdvancementTree()`, а `MappedRegistry.get(TagKey)` повертає кешований порожній `HolderSet.Named`. Висячі `Holder.Reference` під час заморозки прив'язуються до безпечних заглушок (`LootTable.EMPTY`, `AllOfCondition`, `SequenceFunction`, `EmptySlotSource`). Якщо `gameplay.advancements: true`, а `chunks.structures` чи `gameplay.recipes` вимкнено, залежні досягнення та їхні нащадки за `parent` м'яко пропускаються з одним стартовим `WARN`.
+- **DFU (`startup.datafixers: false`):** `DATA_FIXER` і `FILE_FIXER` не дорівнюють `null`, оскільки створюється мінімальна схема `0` із `ConcurrentHashMap<>` і no-op правилом. Якщо `level.dat` має старіший `DataVersion` (< `5023` для 26.3), ядро виводить один стартовий `WARN`.
+- **Ліниві кеші блоків (`caches.eager-blockstate-cache: false`):** якщо плагін або ядро вперше звернеться до властивості блоку під час роботи сервера, 15 публічних і Moonrise-геттерів у `BlockBehaviour.BlockStateBase` потокобезпечно прогріють кеш на вимогу (`ensureCacheInitialized()`) із захистом від реентерабельності.
+- **Заблоковані виклики (`createWorld`, `findNearestMapStructure`, `getWorld`):** повертають штатне `@Nullable`-значення та виводять у консоль попередження (`ApisDiagnostics.warnBlocked`), у якому одразу вказано ключ `configs/apis.yml`, що заблокував дію.
+
+## Чи не конфліктують `configs/apis.yml` і `paper-*.yml`, `spigot.yml`, `bukkit.yml`?
+
+**Ні, завдяки механізму `ApisConfigSync`.**  
+Коли параметр керується через `configs/apis.yml`, ядро примусово синхронізує відповідні поля в пам'яті (`GlobalConfiguration`, `WorldConfiguration`, `SpigotConfig`, `CraftServer`) і **вирізає дублюючі ключі** перед записом файлів на диск:
+- із `server.properties`: allow-nether, spawn-monsters, spawn-animals, spawn-npcs;
+- із `bukkit.yml`: settings.allow-end;
+- із `spigot.yml`: advancements.disable-saving, advancements.disabled, players.disable-saving;
+- із `paper-global.yml` та `paper-world*.yml`: misc.enable-nether, collisions.enable-player-collisions, environment.disable-thunder, environment.disable-ice-and-snow, unsupported-settings.ticking.chunks.
+
+Після команди `/apis reload` метод `ApisConfigSync.syncAll(server)` оновлює всі завантажені світи без перезапуску. Повну таблицю синхронізації наведено в [довіднику configs/apis.yml](../configuration/apis-config/#механізм-apisconfigsync).
+
+## Чи не ламають `PluginPackageIndex` і `Commodore` плагіни з ByteBuddy або ASM?
+
+**Ні, для динамічно згенерованих класів передбачено резервний шлях (fallback):**
+
+- **`PluginPackageIndex`:** під час старту індексує пакети з JAR-файлу плагіна та його бібліотек, щоб при пошуку в `SimpleListPluginClassLoaderGroup` пропускати чужі плагіни за O(1). Проте, якщо клас не знайдено і хоча б один завантажувач було пропущено (`anySkipped`), ядро виконує резервний прохід по пропущених завантажувачах і запам'ятовує знайдений динамічний пакет (`recordDynamicPackage`). Завдяки цьому плагіни на базі ByteBuddy, ASM або `defineClass` працюють без збоїв.
+- **`Commodore.mayNeedConversion`:** не вимикає трансформацію старих плагінів, а лише виконує без-алокаційний прескан заголовка `.class` (`0xCAFEBABE`) та `CONSTANT_Utf8` у пулі констант. ASM `ClassReader`/`ClassWriter` пропускається лише тоді, коли в класі гарантовано немає префіксів `org/bukkit/`, `org/spigotmc/`, `com/destroystokyo/`, `io/papermc/`, `com.mysql.jdbc.Driver` або застарілих `Enum`-перейменувань.
+
+## Чи не видалить автозняття `session.lock` замок живого сусіднього сервера?
+
+**Ні.** `DirectoryLock` записує у `session.lock` не лише стандартний маркер, а й PID процесу, мітку часу запуску та ідентифікатор хоста (`CURRENT_HOST_ID`, який на Linux включає `/proc/sys/kernel/random/boot_id`).
+
+`tryBreakStaleSessionLock` видаляє `session.lock` **лише тоді**, коли одночасно виконуються дві умови:
+1. Ідентифікатор хоста збігається з поточним (або відсутній).
+2. Процес із вказаним `pid` (`!= currentPid`) гарантовано не запущений у системі (`ProcessHandle.of(pid).filter(ProcessHandle::isAlive).isEmpty()`).
+
+Якщо світ заблокований живим сусіднім процесом на тій самій машині або іншим хостом по мережевому диску, ядро **не чіпатиме** блокування і штатно зупиниться з помилкою.
+
+## Які реальні показники швидкості запуску та продуктивності в бенчмарках?
+
+**Ядро Apis ініціалізується менш ніж за секунду (`~0.85 с`), а в порівняльних тестах з 9 важкими плагінами запускається приблизно вдвічі швидше й споживає майже вдвічі менше RAM в простої, ніж Paper.**
+
+Умови бенчмарків (Docker `linux/arm64`, 4 vCPU, 4 GiB RAM, Java 25, AOT-кеш, прямий протокол `26.3` із 9 плагінами: `ViaVersion`, `LuckPerms`, `KaMenu`, `FancyNpcs`, `Skript`, `emotecraft`, `TAB`, `WorldEdit`, `GrimAC`):
+- **Холодний старт (`Done`):** на Apis **5.91 с** у найкращому прогоні (**6.28 с** у середньому за 3 прогонами; `5.52 с` у серії профілювання, де сама ініціалізація ядра займає **0.85 с**, а решта припадає на `onLoad`/`onEnable` плагінів) проти **12.27 с** на Paper.
+- **RAM у простої (idle):** **1021.3 MiB** у найкращому прогоні (**1140.9 MiB** у середньому) на Apis проти **1886.7 MiB** на Paper.
+- **100 ботів (парний тест 90 с плато, 0 кіків і помилок):** середній MSPT **10.19 ms** (CPU **186.4%**, макс. пауза GC `92.7 - 140.3 ms`) проти **27.53 ms** на Paper (CPU **380.4%**, макс. пауза GC `516.8 - 573.7 ms`).
+- **Стрес-ліміт під 60 - 70 ms MSPT:** Paper перевищив ліміт уже на **150 ботах** (`111.75 ms`, `12.52 TPS`) і крашнув на **200**, тоді як Apis на 200 ботах тримав **8.59 ms** (`20.00 TPS`), на 300 ботах тримав **32.59 ms** (`19.9 TPS`) і без жодного кіку або помилки дійшов до **350 ботів** (`64.32 ms`, `15.4 TPS`).
+- **Повторюваність на 250 ботах (3 прогони, `4/с`):** у всіх 3 запусках вижили **250/250** гравців (`0` помилок, `20.0 TPS` settled), у найкращому прогоні `14.80 ms` settled MSPT (`16.70 ms` середній MSPT, `253.86%` CPU); при прискореному вході **12 ботів/с** так само вижили **250/250** без помилок (`20.50 ms` settled).
+
+Пришвидшення досягається за рахунок пропуску зайвої стартової роботи та кешів:
+- без ініціалізації DFU та його двох фонових потоків;
+- без парсингу ~1100 таблиць луту, рецептів, досягнень і структур;
+- без прогріву ~27k+ `BlockState` і 16 МБ таблиці `CraftMapColorCache` на старті;
+- без мережевих затримок Mojang Services Discovery та перевірки версій;
+- із кешем `cache/.paperclip-stamp`, дисковим кешем `cache/natives/`, `OSNuma.NoOp` поза Linux і готовим `Class-Path` для [Java 25 AOT Cache](../internals/aot/).
+
+Водночас кінцевий час старту в продакшні значною мірою залежить від самих плагінів у `addons/`. Детальніше дивіться у статті [Вплив плагінів та реальні бенчмарки](../practice/plugins-impact/).
+
+## Як зрозуміти, що сторонній плагін зламався через нову папку або вимкнену функцію?
+
+У консолі завжди виводиться точна діагностика:
+1. Якщо старий плагін впав через пошук перенесеного файлу в корені (`server.properties`, `bukkit.yml`, `ops.json`, `whitelist.json` тощо), `ApisDiagnostics` перехопить стектрейс і виведе компактне дворядкове `ERROR`-повідомлення з підказкою, на який саме файл створити симлинк.
+2. Якщо плагін викликав заблокований API (наприклад, створення світу при `dimensions.custom-worlds: false`), у консолі з'явиться повідомлення `Blocked plugin '<name>' ... - disabled by <key> in apis.yml`.
+3. Повний список активних обмежень завжди можна перевірити командою `/apis status`.
+
+## Як правильно оновлювати ядро (jar-файл)?
+
+1. **Зупиніть сервер** командою `stop` і замініть `apis-*.jar` у корені на нову версію.
+2. **Ручне очищення кешу не потрібне:** при першому запуску нового JAR лаунчер Paperclip звірить хеш маніфестів (`versions.list`, `libraries.list`, `patches.list`, `download-context`) із `cache/.paperclip-stamp`, побачить зміни й автоматично оновить розпакований JAR у `versions/`, бібліотеки в `libraries/` та штамп кешу.
+3. **Налаштування зберігаються:** `configs/apis.yml` не перезаписується «з нуля» - ваші значення залишаються, а нові ключі автоматично додаються зі значеннями за замовчуванням.
+4. **Якщо ви використовуєте Java 25 AOT (`cache/apis-cp.aot`):** після заміни JAR обов'язково перезберіть AOT-профіль (`-XX:AOTMode=record`) і кеш (`-XX:AOTMode=create`), інакше JVM проігнорує старий файл або виведе попередження про невідповідність класів.
+
+## Як підключити сервер до BungeeCord / Velocity? Чи працює Forwarding?
+
+**Так, BungeeCord і Velocity (включно з Modern Forwarding) працюють повністю штатно.**
+
+Усі конфіги лежать у `configs/`, тому вмикання проксі налаштовується у звичних файлах усередині цієї теки:
+- **`configs/server.properties`:** встановіть `online-mode=false`.
+- **Для Velocity (Modern Forwarding):** у `configs/paper-global.yml` задайте `proxies.velocity.enabled: true`, `online-mode: true` та секретний ключ `secret` (ідентичний `velocity.toml`).
+- **Для BungeeCord / Waterfall:** у `configs/spigot.yml` увімкніть `settings.bungeecord: true`. Механізм `ApisConfigSync` не зачіпає секцію проксі, тому налаштування forwarding не затираються.
+- **Порада для `configs/apis.yml`:** за проксі можна виставити `network.generate-keypair: false` - ядро пропустить генерацію RSA-ключів і завантаження нативної криптографії `Natives.cipher` на старті (якщо вони колись знадобляться, ключі згенеруються ліниво при першому зверненні).
+
+## Чи можна редагувати `apis.yml` на льоту без рестарту?
+
+**Так, для більшості runtime-параметрів працює команда `/apis reload`** (потрібне право `apis.admin`, за замовчуванням OP).
+
+Під час `/apis reload` ядро виконує три кроки без перезапуску сервера:
+1. `ApisConfig.reload()` - перечитує `configs/apis.yml` і миттєво оновлює бітові маски `FeatureRegistry`.
+2. `FeatureRegistry.resolveRegistries(...)` - оновлює фільтр AI (`entities.ai.type-filter`) та списки тікінгу вимірів (`dimensions.always-ticking`, `dimensions.never-ticking`).
+3. `ApisConfigSync.syncAll(server)` - синхронізує дзеркальні прапорці у `SpigotConfig`, `GlobalConfiguration` і всіх завантажених `ServerLevel#paperConfig()`.
+
+**Що змінюється одразу:** усі перемикачі тікінгу, AI мобів, колізій, природного спавну, фізики, оточення світу, механік гравців (`locator-bar`, `floating-kick`, `statistics` тощо), обмеження пакетів (`packet-range-clamping`), `storage.periodic-autosave`, `storage.world-saving` і шаблони `messages.commands`.
+
+**Що потребує повного перезапуску:** параметри холодного старту, реєстрів, стартових кешів та ініціалізації світів (`startup.*`, `caches.*`, `gameplay.recipes`, `gameplay.advancements`, `gameplay.loot-tables`, `chunks.structures`, `chunks.biome-decoration`, `dimensions.mode`, `dimensions.fallback-world`, `dimensions.enabled`, `network.analytics.bstats`, `network.analytics.spark`).

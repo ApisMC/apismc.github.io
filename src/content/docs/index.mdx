@@ -1,40 +1,89 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Apis
+description: Швидке ядро на базі Paper для Minecraft 26.3 та Java 25, створене для лобі, хабів і мініігор.
+sidebar:
+  hidden: true
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  title: Apis
+  tagline: Спеціалізований форк Paper для Minecraft 26.3 / Java 25 під лобі, хаби, черги та мініігри. Чистий старт до 2 секунд, вбудоване керування світами та вимкнення зайвих механік.
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/icon.svg
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Почати роботу
+      link: ./getting-started/migration/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
-      variant: minimal
+      variant: primary
+    - text: Часті запитання (FAQ)
+      link: ./faq/
+      variant: secondary
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, Tabs, TabItem } from "@astrojs/starlight/components";
 
-## Next steps
+## Чому саме Apis
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+<CardGrid>
+  <Card title="Сумісність із плагінами" icon="puzzle">
+    Усі плагіни під Bukkit, Spigot і Paper працюють без змін: публічний API збережено на 100%, а складні плагіни на кшталт ProtocolLib, GrimAC чи LuckPerms працюють стабільно й без модифікацій.
+  </Card>
+  <Card title="Вимкнення зайвих механік" icon="setting">
+    У [configs/apis.yml](./configuration/apis-config/) можна вимкнути все, що не потрібне на лобі чи арені: AI мобів, редстоун, фізику блоків, досягнення, рецепти чи збереження світу - без падінь і помилок у плагінах.
+  </Card>
+  <Card title="Швидкий запуск і низьке навантаження" icon="rocket">
+    Чистий старт менш ніж за 2 секунди, адаптована структура для спрощеної генерації [Java 25 AOT-кешу](./internals/aot/) та оптимізована мережева підсистема під високий онлайн.
+  </Card>
+  <Card title="Вбудовані світи замість Multiverse" icon="open-book">
+    Окрема тека [worlds/](./worlds/standalone-mode/) з порожнім Void-світом, файлом `world.yml` для спавну та режиму гри, командами `/world` і `/tpworld`, а також роботою без запису на диск.
+  </Card>
+</CardGrid>
+
+## Apis проти Paper на практиці
+
+Звичайний Paper тримає активними всі системи ванільного виживання навіть на серверах, де вони не потрібні - у лобі, хабах, чергах або мінііграх. У тестах на однаковому наборі з 9 плагінів (`LuckPerms`, `TAB`, `Skript`, `WorldEdit`, `GrimAC`, `ViaVersion`, `PacketEvents`) у Docker (`4 vCPU`, `4 GiB RAM`, `Java 25` з AOT):
+
+<Tabs>
+  <TabItem label="Витривалість (до 350 гравців)">
+    ![TPS і затримка тіку Paper проти Apis на 100, 150, 200, 300 і 350 гравцях](../../assets/charts/scaling.svg)
+  </TabItem>
+  <TabItem label="Стабільність при 100 гравцях">
+    ![Порівняння відгуку, навантаження CPU, пам'яті та фризів при 100 гравцях](../../assets/charts/plateau-100.svg)
+  </TabItem>
+  <TabItem label="Швидкість запуску та пам'ять">
+    ![Порівняння швидкості запуску з плагінами, чистого запуску та економії пам'яті без гравців](../../assets/charts/boot-ram.svg)
+  </TabItem>
+</Tabs>
+
+| Spark-профіль | Посилання |
+| --- | --- |
+| 350 ботів, кроковий тест | <a href="https://spark.lucko.me/OLVVRmk3ST" target="_blank" rel="noopener noreferrer">spark.lucko.me/OLVVRmk3ST</a> |
+| Прямий вхід 250 ботів #1 | <a href="https://spark.lucko.me/rzHe0FAdrg" target="_blank" rel="noopener noreferrer">spark.lucko.me/rzHe0FAdrg</a> |
+| Прямий вхід 250 ботів #2 | <a href="https://spark.lucko.me/YY7uUqBydH" target="_blank" rel="noopener noreferrer">spark.lucko.me/YY7uUqBydH</a> |
+| Прямий вхід 250 ботів #3 | <a href="https://spark.lucko.me/a7dZyQC10D" target="_blank" rel="noopener noreferrer">spark.lucko.me/a7dZyQC10D</a> |
+| Швидкий вхід 250 ботів (`12/с`) | <a href="https://spark.lucko.me/3BNUnI8mob" target="_blank" rel="noopener noreferrer">spark.lucko.me/3BNUnI8mob</a> |
+
+Усі деталі методики та повні результати тестів дивіться у статті [Вплив плагінів та реальні бенчмарки](./practice/plugins-impact/).
+
+
+
+<CardGrid>
+  <LinkCard
+    title="Міграція з Paper / Purpur"
+    description="Як перенести наявний сервер на нову структуру папок."
+    href="./getting-started/migration/"
+  />
+  <LinkCard
+    title="Структура каталогів та CLI-прапорці"
+    description="Призначення configs/, addons/, plugins/, users/, cache/ і прапорців запуску."
+    href="./getting-started/directory-structure/"
+  />
+  <LinkCard
+    title="Налаштування configs/apis.yml"
+    description="Довідник усіх параметрів ядра та синхронізація ApisConfigSync."
+    href="./configuration/apis-config/"
+  />
+  <LinkCard
+    title="Вимкнення систем (Kill-Switches)"
+    description="Які механіки можна вимкнути та як гарантується сумісність із плагінами."
+    href="./configuration/kill-switches/"
+  />
 </CardGrid>
