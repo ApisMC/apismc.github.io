@@ -1,7 +1,7 @@
 {
   "name": "bunapiswebsite",
   "type": "module",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -11,7 +11,18 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.43.1",
+    "@fontsource/fira-code": "^5.3.0",
+    "@fontsource/fira-mono": "^5.3.0",
+    "@fontsource/fira-sans": "^5.3.0",
     "astro": "^7.3.6",
-    "sharp": "^0.35.3"
+    "astro-d2": "^0.14.1",
+    "sharp": "^0.35.3",
+    "starlight-auto-sidebar": "^0.4.1",
+    "starlight-file-explorer": "^0.1.0",
+    "starlight-theme-black": "^0.7.2",
+    "starlight-theme-next": "^0.5.1"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
   }
 }

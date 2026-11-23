@@ -1,0 +1,246 @@
+@import "@fontsource/fira-sans/400.css";
+@import "@fontsource/fira-sans/400-italic.css";
+@import "@fontsource/fira-sans/500.css";
+@import "@fontsource/fira-sans/600.css";
+@import "@fontsource/fira-sans/700.css";
+@import "@fontsource/fira-sans/800.css";
+@import "@fontsource/fira-mono/400.css";
+@import "@fontsource/fira-mono/500.css";
+@import "@fontsource/fira-mono/700.css";
+
+.nav-buttons,
+header a[aria-label="Previous page"],
+header a[aria-label="Next page"],
+.page-title a[aria-label="Previous page"],
+.page-title a[aria-label="Next page"] {
+  display: none !important;
+}
+
+#starlight__sidebar a,
+.sidebar-pane a,
+.sidebar-content a,
+[data-astro-cid-epfkn2hl] a {
+  height: auto !important;
+  min-height: 2rem !important;
+  line-height: 1.35 !important;
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+  display: flex !important;
+  align-items: center !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+#starlight__sidebar a span,
+.sidebar-pane a span {
+  display: inline-block !important;
+  white-space: normal !important;
+  line-height: inherit !important;
+}
+
+:root:root {
+  --sl-font:
+    "Fira Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --sl-font-mono:
+    "Fira Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  --font-sans: var(--sl-font);
+  --font-mono: var(--sl-font-mono);
+  --ec-codeFontFml: var(--sl-font-mono);
+  --sl-content-width: 50rem !important;
+  --apis-toc-width: 17rem;
+  --apis-toc-gap: 1rem;
+  --apis-d2-margin-y: 2rem;
+  --apis-d2-padding: 0rem;
+  --apis-d2-max-width: 100%;
+  --apis-d2-font-size: 17px;
+  --apis-d2-title-size: 30px;
+}
+
+html,
+body {
+  font-family: var(--sl-font);
+}
+
+code,
+pre,
+kbd,
+samp,
+.expressive-code pre,
+.expressive-code code,
+.sl-badge,
+starlight-file-explorer .sfe-panel-path {
+  font-family: var(--sl-font-mono);
+}
+
+[data-has-sidebar][data-has-toc] .main-pane,
+.main-pane {
+  max-width: var(--sl-content-width) !important;
+}
+
+@media (min-width: 48rem) and (max-width: 79.999rem) {
+  .main-pane {
+    padding-inline: 1.5rem !important;
+  }
+}
+
+@media (min-width: 80rem) {
+  .main-pane {
+    padding-inline: 1.5rem !important;
+  }
+
+  [data-has-sidebar][data-has-toc] .main-pane {
+    flex: 1 1 0%;
+    min-width: 0;
+    width: auto !important;
+    max-width: calc(
+      var(--sl-content-width) +
+      var(--apis-toc-gap) +
+      1.5rem
+    ) !important;
+    padding-inline: 1.5rem var(--apis-toc-gap) !important;
+  }
+
+  .right-sidebar-container {
+    flex: 0 0 var(--apis-toc-width) !important;
+    width: var(--apis-toc-width) !important;
+    margin-inline-start: auto !important;
+    padding-inline: 0 !important;
+  }
+
+  .right-sidebar {
+    position: fixed !important;
+    right: 0 !important;
+    left: auto !important;
+    width: var(--apis-toc-width) !important;
+    padding-inline: 1rem 1.5rem !important;
+    z-index: var(--sl-z-index-toc, 4);
+  }
+
+  .right-sidebar-panel .sl-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+header.header {
+  background-color: color-mix(
+    in oklab,
+    var(--sl-color-bg-nav) 75%,
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--border, var(--sl-color-gray-5)) 55%, transparent) !important;
+}
+
+:is(.site-title, a[class*="site-title"]) > img[data-astro-cid-6rvad3va],
+a.site-title > img {
+  height: 3rem;
+  width: auto;
+  max-height: none;
+  max-width: none;
+  flex-shrink: 0;
+}
+
+:is(.site-title, a[class*="site-title"]) > span,
+a.site-title > span {
+  font-size: 1.4rem !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.02em;
+}
+
+svg[data-d2-version] {
+  display: block;
+  width: 100%;
+  max-width: var(--apis-d2-max-width);
+  height: auto;
+  margin-block: var(--apis-d2-margin-y) !important;
+  margin-inline: auto;
+  padding: var(--apis-d2-padding);
+  box-sizing: border-box;
+  background: transparent !important;
+}
+
+svg.d2-svg {
+  background: transparent !important;
+}
+
+svg.d2-svg > rect.fill-N7:first-child {
+  fill: transparent !important;
+}
+
+svg.d2-svg text {
+  font-family: var(--sl-font) !important;
+}
+
+svg.d2-svg text[style*="font-size:16px"] {
+  font-size: var(--apis-d2-font-size) !important;
+}
+
+svg.d2-svg text[style*="font-size:28px"] {
+  font-size: var(--apis-d2-title-size) !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .stroke-B1,
+:root[data-theme="dark"] svg.d2-svg .stroke-B2 {
+  stroke: #f4f4f5 !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-B1 {
+  fill: #f4f4f5 !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-B4 {
+  fill: #27272a !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-B5 {
+  fill: #1f1f23 !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-B6 {
+  fill: #242429 !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-N1 {
+  fill: #f4f4f5 !important;
+}
+
+:root[data-theme="dark"] svg.d2-svg .fill-N2 {
+  fill: #a1a1aa !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .stroke-B1,
+:root[data-theme="light"] svg.d2-svg .stroke-B2 {
+  stroke: #18181b !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .fill-B1 {
+  fill: #18181b !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .fill-B4 {
+  fill: #e4e4e7 !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .fill-B5,
+:root[data-theme="light"] svg.d2-svg .fill-B6 {
+  fill: #f4f4f5 !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .fill-N1 {
+  fill: #18181b !important;
+}
+
+:root[data-theme="light"] svg.d2-svg .fill-N2 {
+  fill: #52525b !important;
+}
+
+.sl-markdown-content :is(table, thead, tbody, tr, th, td) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
