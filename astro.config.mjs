@@ -8,6 +8,7 @@ import d2 from "astro-d2";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://apismc.github.io",
   integrations: [
     starlight({
       title: "ApisMC",
