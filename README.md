@@ -1,49 +1,53 @@
-# Starlight Starter Kit: Basics
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/badge-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="public/badge-white.svg" />
+    <img alt="Apis" src="public/badge-white.svg" width="220" />
+  </picture>
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+  <p>
+    <a href="https://astro.build"><img src="https://astro.badg.es/v2/built-with-astro/tiny.svg" alt="Built with Astro" /></a>
+    <a href="https://starlight.astro.build"><img src="https://astro.badg.es/v2/built-with-starlight/tiny.svg" alt="Built with Starlight" /></a>
+  </p>
 
+<p>
+  Documentation site for <a href="https://github.com/ApisMC/Apis">Apis</a>, a specialized Paper fork for Minecraft built for lobbies, hubs, queues, and minigames.
+</p>
+</div>
+
+## Getting Started
+
+```bash
+# Install dependencies
+bun install
+
+# Start dev server (foreground, http://localhost:4321)
+bun run dev
+
+# Or start dev server in background
+bun run astro dev --background
 ```
-bun create astro@latest -- --template starlight
+
+## Stop & Manage
+
+```bash
+# Stop foreground server
+Ctrl+C
+
+# Manage background server
+bun run astro dev stop
+bun run astro dev status
+bun run astro dev logs
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Build & Preview
 
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+```bash
+bun run build
+bun run preview
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+## License [![MIT License](https://img.shields.io/badge/license-MIT-18181b?style=flat&labelColor=09090b)](LICENSE)
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+This project is licensed under the [MIT License](LICENSE).
 
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
