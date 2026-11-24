@@ -273,3 +273,16 @@ svg.d2-svg text[style*="font-size:28px"] {
     transform: translateY(1.5px) scale(0.985);
   }
 }
+
+starlight-lang-select label {
+  --sl-select-width: 2.35rem !important;
+  width: 2.35rem !important;
+}
+
+starlight-lang-select select {
+  width: calc(2.35rem + var(--sl-inline-padding, 0.5rem) * 2) !important;
+  min-width: 0 !important;
+  padding-inline: 0 !important;
+  color: transparent !important;
+  text-shadow: none !important;
+}
