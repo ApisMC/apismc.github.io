@@ -1,0 +1,47 @@
+---
+import { Card } from "@astrojs/starlight/components";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import ReleaseCard from "./ReleaseCard.astro";
+
+interface Props {
+  locale: "en" | "uk";
+}
+
+const { locale } = Astro.props;
+const isUk = locale === "uk";
+
+const copy = isUk
+  ? {
+      title: "Завантаження Apis",
+      description:
+        "Актуальні та архівні збірки ядра Apis для Minecraft, історія змін і пряме завантаження JAR.",
+      heading: "Усі збірки",
+      loadingTitle: "Завантаження...",
+      loadingBody: "Отримання списку релізів...",
+    }
+  : {
+      title: "Downloads",
+      description:
+        "Latest and archived Apis server builds for Minecraft, release notes, and direct JAR downloads.",
+      heading: "All Releases",
+      loadingTitle: "Loading...",
+      loadingBody: "Fetching release list...",
+    };
+---
+
+<StarlightPage
+  frontmatter={{
+    title: copy.title,
+    description: copy.description,
+  }}
+  hasSidebar={true}
+  headings={[{ depth: 2, slug: "releases", text: copy.heading }]}
+>
+  <Card title={copy.loadingTitle}>{copy.loadingBody}</Card>
+
+  <ReleaseCard />
+</StarlightPage>
+
+<script>
+  import "../scripts/downloads/initDownloads";
+</script>

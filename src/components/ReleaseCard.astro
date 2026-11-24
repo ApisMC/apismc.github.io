@@ -1,0 +1,196 @@
+---
+import { Badge, Card, Icon, LinkButton } from "@astrojs/starlight/components";
+---
+
+<template data-release-card-template>
+  <Card title="">
+    <Badge text="Supported" variant="success" data-release-status />
+    <button
+      type="button"
+      class="release-toggle"
+      aria-expanded="false"
+      aria-label="Show changelog"
+      data-release-toggle
+    >
+      <Icon name="right-caret" size="1.65rem" />
+    </button>
+
+    <details class="release-details" data-release-details>
+      <summary class="release-summary">
+        <span class="release-summary-preview" data-release-preview></span>
+      </summary>
+      {/* data-heading: "h1" | "h2" | "h3" | "h4" для заголовков внутри чейнджлога */}
+      <div class="release-changelog" data-release-changelog data-heading="h3"></div>
+    </details>
+
+    <div class="release-footer">
+      <div class="release-links">
+        <LinkButton href="#" variant="primary" data-release-download>
+          <span data-release-download-label>Download</span>
+        </LinkButton>
+        <LinkButton
+          href="#"
+          variant="secondary"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-release-github
+        >
+          GitHub Release
+        </LinkButton>
+      </div>
+
+      <p class="release-meta">
+        <span data-release-size></span>
+        {" - "}<span data-release-date></span>
+      </p>
+    </div>
+  </Card>
+</template>
+
+<style is:global>
+  .sl-markdown-content article.card.release-card > p.title {
+    flex-wrap: wrap;
+    font-size: 1.4rem !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+  }
+
+  .sl-markdown-content article.card.release-card > p.title > span:first-child {
+    font-size: inherit !important;
+    line-height: inherit !important;
+    font-weight: inherit !important;
+  }
+
+  .sl-markdown-content .release-toggle {
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius, 0.5rem);
+    background: transparent;
+    color: var(--muted-foreground, var(--sl-color-gray-2));
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .sl-markdown-content .release-toggle:hover {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--accent, #27272a) 60%, transparent);
+  }
+
+  .sl-markdown-content .release-toggle svg {
+    width: 1.65rem;
+    height: 1.65rem;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .sl-markdown-content .release-card:has(.release-details[open]) .release-toggle svg {
+    transform: rotate(90deg);
+  }
+
+  .sl-markdown-content .release-details {
+    margin: 0.25rem 0;
+    border-inline-start: 0 !important;
+    padding-inline-start: 0 !important;
+  }
+
+  .sl-markdown-content .release-summary {
+    display: flex !important;
+    align-items: center;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sl-markdown-content .release-summary::before {
+    display: none !important;
+  }
+
+  .sl-markdown-content .release-summary-preview {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 400;
+    font-size: 0.875rem;
+    color: var(--muted-foreground, var(--sl-color-gray-3));
+  }
+
+  .sl-markdown-content .release-details[open] > .release-summary {
+    display: none !important;
+  }
+
+  .sl-markdown-content .release-details[open] > .release-changelog {
+    padding-inline-start: 0;
+  }
+
+  .sl-markdown-content .release-details[open] > .release-changelog > :first-child {
+    margin-top: 0 !important;
+  }
+
+  .sl-markdown-content .release-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    color: var(--muted-foreground, var(--sl-color-gray-3));
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .sl-markdown-content .release-divider::before,
+  .sl-markdown-content .release-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border, var(--sl-color-gray-5));
+  }
+
+  .sl-markdown-content .release-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border, var(--sl-color-gray-5));
+  }
+
+  .sl-markdown-content .release-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .sl-markdown-content .release-links .sl-link-button {
+    height: auto;
+    padding: 0.65rem 1.2rem;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .sl-markdown-content .release-meta {
+    margin: 0 0 0 auto;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .sl-markdown-content .release-changelog > h1,
+  .sl-markdown-content .release-changelog > h2,
+  .sl-markdown-content .release-changelog > h3,
+  .sl-markdown-content .release-changelog > h4 {
+    margin-top: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+</style>

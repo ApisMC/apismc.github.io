@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="public/badge-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="public/badge-white.svg" />
-    <img alt="Apis" src="public/badge-white.svg" width="220" />
+    <img alt="Apis" src="public/badge-white.svg" width="250" />
   </picture>
 
   <p>

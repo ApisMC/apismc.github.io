@@ -125,15 +125,32 @@ starlight-file-explorer .sfe-panel-path {
 }
 
 header.header {
+  background-color: transparent !important;
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--border, var(--sl-color-gray-5)) 55%, transparent) !important;
+}
+
+header.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-color: color-mix(
     in oklab,
     var(--sl-color-bg-nav) 75%,
     transparent
-  ) !important;
+  );
   -webkit-backdrop-filter: blur(12px) saturate(150%);
   backdrop-filter: blur(12px) saturate(150%);
-  border-bottom: 1px solid
-    color-mix(in oklab, var(--border, var(--sl-color-gray-5)) 55%, transparent) !important;
+}
+
+body[data-mobile-menu-expanded] {
+  overflow: hidden;
+}
+
+nav.nav-bar a.apis-mobile-home-link {
+  display: none !important;
 }
 
 :is(.site-title, a[class*="site-title"]) > img[data-astro-cid-6rvad3va],
@@ -243,4 +260,16 @@ svg.d2-svg text[style*="font-size:28px"] {
 .sl-markdown-content :is(table, thead, tbody, tr, th, td) {
   background: transparent !important;
   background-color: transparent !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(.sl-link-button, .nav-bar a, .release-toggle, button) {
+    transition-property: transform, color, background-color, border-color, box-shadow, opacity;
+    transition-duration: 90ms, 150ms, 150ms, 150ms, 150ms, 150ms;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease, ease, ease, ease, ease;
+  }
+
+  :is(.sl-link-button, .nav-bar a, .release-toggle, button):not(:disabled):active {
+    transform: translateY(1.5px) scale(0.985);
+  }
 }

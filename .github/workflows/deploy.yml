@@ -30,6 +30,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build with Astro
+        env:
+          PUBLIC_APIS_API_URL: ${{ secrets.PUBLIC_APIS_API_URL || vars.PUBLIC_APIS_API_URL }}
         run: bun run build
 
       - name: Upload artifact

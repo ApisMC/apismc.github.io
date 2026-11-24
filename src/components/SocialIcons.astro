@@ -1,0 +1,26 @@
+---
+import { LinkButton } from "@astrojs/starlight/components";
+import DefaultSocialIcons from "@astrojs/starlight/components/SocialIcons.astro";
+---
+
+<DefaultSocialIcons />
+<LinkButton
+  href="https://ko-fi.com/kotop21"
+  variant="primary"
+  icon="heart"
+  iconPlacement="start"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="apis-donate-btn"
+>
+  Donate
+</LinkButton>
+
+<style>
+  .apis-donate-btn {
+    height: 2rem;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    border-radius: var(--radius, 0.5rem);
+  }
+</style>
