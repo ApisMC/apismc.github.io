@@ -1,0 +1,122 @@
+---
+title: Migrating from Paper
+description: Step-by-step guide to migrating an existing Paper server to Apis without losing worlds, configs, or plugin data.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## What Changes vs Paper
+
+| Item | Paper | Apis (default) |
+| --- | --- | --- |
+| **Server configs** | Server root & `config/` | `configs/` (`--configs-dir`) |
+| **Plugin JARs** | `plugins/*.jar` | `addons/*.jar` (`--addons-dir`) |
+| **Plugin updates** | `plugins/update/` | `addons/update/` |
+| **Plugin data & configs** | `plugins/<Plugin>/` | `plugins/<Plugin>/` (`-P` / `--plugins`) |
+| **Worlds** | Root (`world/`, `world_nether/`, `world_the_end/`) | `worlds/` (`--worlds-dir`) |
+| **Player lists (`ops.json`, ...)** | Server root | `users/` (root fallback still supported) |
+
+---
+
+## Step-by-Step Migration
+
+### Step 1. Stop & Backup
+
+Stop the server with `stop` and back up your worlds, configs, and `plugins/` directory.
+
+### Step 2. Replace the Core JAR
+
+Remove the old `paper-*.jar` and place `apis-paperclip-<version>-release.jar` (from `github.com/ApisMC/Apis`) into the server root.
+
+### Step 3. Move Configs to `configs/`
+
+Create `configs/` and move all server config files there:
+
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
+```bash
+mkdir -p configs
+mv server.properties bukkit.yml spigot.yml commands.yml help.yml permissions.yml configs/ 2>/dev/null || true
+
+# If you used Paper configs inside config/
+if [ -d config ]; then
+  mv config/* configs/
+  rmdir config
+fi
+```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+New-Item -ItemType Directory -Force configs | Out-Null
+Move-Item -ErrorAction SilentlyContinue server.properties, bukkit.yml, spigot.yml, commands.yml, help.yml, permissions.yml configs/
+
+# If you used Paper configs inside config/
+if (Test-Path config) {
+  Move-Item -ErrorAction SilentlyContinue config/* configs/
+  Remove-Item -ErrorAction SilentlyContinue config
+}
+```
+  </TabItem>
+</Tabs>
+
+:::note
+On first boot, Apis automatically strips duplicate keys from legacy configs (`allow-nether` and `spawn-monsters` in `server.properties`, `allow-end` in `bukkit.yml`, etc.) so `configs/apis.yml` acts as the single source of truth.
+:::
+
+### Step 4. Separate Plugin JARs from Plugin Data
+
+Move plugin `.jar` files into `addons/`, leaving plugin data folders in `plugins/`:
+
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
+```bash
+mkdir -p addons addons/update
+mv plugins/*.jar addons/ 2>/dev/null || true
+
+# If pending plugin updates exist
+if [ -d plugins/update ]; then
+  mv plugins/update/* addons/update/ 2>/dev/null || true
+  rmdir plugins/update 2>/dev/null || true
+fi
+```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+New-Item -ItemType Directory -Force addons, addons/update | Out-Null
+Move-Item -ErrorAction SilentlyContinue plugins/*.jar addons/
+
+# If pending plugin updates exist
+if (Test-Path plugins/update) {
+  Move-Item -ErrorAction SilentlyContinue plugins/update/* addons/update/
+  Remove-Item -ErrorAction SilentlyContinue plugins/update
+}
+```
+  </TabItem>
+</Tabs>
+
+### Step 5. Move Worlds & User Lists
+
+Pick the setup that matches your server:
+
+- **Lobbies, hubs, or minigames (`dimensions.mode: standalone`, default):**
+  1. Create `worlds/` and move the worlds you need there (for example, `world/` into `worlds/hub/`).
+  2. Check `dimensions.fallback-world` in `configs/apis.yml` (defaults to `hub`).
+  3. Optionally move `ops.json`, `whitelist.json`, `banned-players.json`, `banned-ips.json`, and `usercache.json` into `users/` (existing root files still load if left in root).
+
+- **Standard survival server (`dimensions.mode: vanilla`):**
+  1. Set `dimensions.mode: vanilla` in `configs/apis.yml`.
+  2. Move `world/`, `world_nether/`, and `world_the_end/` into `worlds/` (or start the server with `--worlds-dir .`).
+
+### Step 6. Start & Verify
+
+```bash
+java --enable-native-access=ALL-UNNAMED -jar apis-paperclip-<version>-release.jar --nogui
+```
+
+Verify active flags in console or in-game with `/apis status`.
+
+:::caution
+If an older plugin hardcodes root paths like `server.properties`, `bukkit.yml`, or `ops.json` and throws an error, Apis prints a short console hint telling you which file to symlink.
+:::

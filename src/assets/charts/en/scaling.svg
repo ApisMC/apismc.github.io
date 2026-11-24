@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 356" role="img" aria-label="Paper vs Apis TPS and MSPT across 100, 150, 200, 300, and 350 players">
+  <style>
+    text {
+      font-family: "Fira Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      fill: #ffffff;
+      text-anchor: middle;
+    }
+    .mono {
+      font-family: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .base { stroke: rgba(255, 255, 255, 0.25); stroke-width: 1.5; }
+    .bar-paper { fill: rgba(255, 255, 255, 0.28); }
+    .bar-apis { fill: #ffffff; }
+    .val { font-size: 12.5px; font-weight: 600; fill: #ffffff; }
+    .val-muted { font-size: 12.5px; font-weight: 500; fill: rgba(255, 255, 255, 0.6); }
+    .ms { font-size: 11px; fill: rgba(255, 255, 255, 0.6); }
+    .who { font-size: 11px; font-weight: 500; fill: rgba(255, 255, 255, 0.55); }
+    .who-apis { font-size: 11px; font-weight: 600; fill: rgba(255, 255, 255, 0.9); }
+    .grp { font-size: 13px; font-weight: 600; fill: rgba(255, 255, 255, 0.85); }
+
+    @media (prefers-color-scheme: light) {
+      text { fill: #18181b; }
+      .base { stroke: rgba(24, 24, 27, 0.25); }
+      .bar-paper { fill: rgba(24, 24, 27, 0.25); }
+      .bar-apis { fill: #18181b; }
+      .val { fill: #18181b; }
+      .val-muted, .ms { fill: rgba(24, 24, 27, 0.6); }
+      .who { fill: rgba(24, 24, 27, 0.55); }
+      .who-apis { fill: #18181b; }
+      .grp { fill: #18181b; }
+    }
+  </style>
+
+  <!-- 100 players -->
+  <text x="63" y="22" class="who">Paper</text>
+  <rect x="49" y="32" width="28" height="240" rx="4" class="bar-paper" />
+  <text x="137" y="22" class="who-apis">Apis</text>
+  <rect x="123" y="32" width="28" height="240" rx="4" class="bar-apis" />
+  <text x="63" y="294" class="val-muted mono">20.0 TPS</text>
+  <text x="137" y="294" class="val mono">20.0 TPS</text>
+  <text x="63" y="311" class="ms mono">(33.7 ms)</text>
+  <text x="137" y="311" class="ms mono">(4.9 ms)</text>
+  <text x="100" y="340" class="grp">100 players</text>
+
+  <!-- 150 players -->
+  <text x="233" y="156" class="who">Paper</text>
+  <rect x="219" y="165.2" width="28" height="106.8" rx="4" class="bar-paper" />
+  <text x="307" y="22" class="who-apis">Apis</text>
+  <rect x="293" y="32" width="28" height="240" rx="4" class="bar-apis" />
+  <text x="233" y="294" class="val-muted mono">8.9 TPS</text>
+  <text x="307" y="294" class="val mono">20.0 TPS</text>
+  <text x="233" y="311" class="ms mono">(111.8 ms)</text>
+  <text x="307" y="311" class="ms mono">(6.0 ms)</text>
+  <text x="270" y="340" class="grp">150 players</text>
+
+  <!-- 200 players -->
+  <text x="403" y="264" class="who">Paper</text>
+  <text x="477" y="22" class="who-apis">Apis</text>
+  <rect x="463" y="32" width="28" height="240" rx="4" class="bar-apis" />
+  <text x="403" y="294" class="val-muted mono">CRASH</text>
+  <text x="477" y="294" class="val mono">20.0 TPS</text>
+  <text x="403" y="311" class="ms mono">(Watchdog)</text>
+  <text x="477" y="311" class="ms mono">(8.6 ms)</text>
+  <text x="440" y="340" class="grp">200 players</text>
+
+  <!-- 300 players -->
+  <text x="573" y="264" class="who">Paper</text>
+  <text x="647" y="23" class="who-apis">Apis</text>
+  <rect x="633" y="33.2" width="28" height="238.8" rx="4" class="bar-apis" />
+  <text x="573" y="294" class="val-muted mono">-</text>
+  <text x="647" y="294" class="val mono">19.9 TPS</text>
+  <text x="647" y="311" class="ms mono">(32.6 ms)</text>
+  <text x="610" y="340" class="grp">300 players</text>
+
+  <!-- 350 players -->
+  <text x="743" y="264" class="who">Paper</text>
+  <text x="817" y="77" class="who-apis">Apis</text>
+  <rect x="803" y="87.2" width="28" height="184.8" rx="4" class="bar-apis" />
+  <text x="743" y="294" class="val-muted mono">-</text>
+  <text x="817" y="294" class="val mono">15.4 TPS</text>
+  <text x="817" y="311" class="ms mono">(64.3 ms)</text>
+  <text x="780" y="340" class="grp">350 players</text>
+
+  <!-- Baseline -->
+  <line x1="20" y1="272" x2="860" y2="272" class="base" />
+</svg>

@@ -1,85 +1,85 @@
 ---
-title: Консольний інтерфейс (Log4j2)
-description: Кастомний рівень логування OK (350), кольорові бейджі %levelBadge, схема %highlightApis та форматування консолі й файлів.
+title: Console UI (Log4j2)
+description: Custom OK (350) log level, colored %levelBadge tags, %highlightApis line colors, and file vs terminal formatting.
 sidebar:
   order: 2
 ---
 
-Apis оновлює форматування термінальної консолі (`TerminalConsole` у `log4j2.xml.patch`) через два власні Log4j2-конвертери в `org.apismc.apis.console`: **`ApisHighlightConverter`** та **`ApisLevelBadgeConverter`**.
+Apis updates terminal console formatting (`TerminalConsole` in `log4j2.xml.patch`) using two custom Log4j2 converters under `org.apismc.apis.console`: **`ApisHighlightConverter`** and **`ApisLevelBadgeConverter`**.
 
-## Кастомний рівень `OK` (пріоритет `350`)
+## Custom `OK` Log Level (Priority `350`)
 
-В `ApisLog` та `ApisLevelBadgeConverter` зареєстровано рівень Log4j2:
+`ApisLog` and `ApisLevelBadgeConverter` register a custom Log4j2 level:
 
 ```java
 Level.forName("OK", 350)
 ```
 
-- Пріоритет **350** розташований між `WARN` (`300`) та `INFO` (`400`).
-- Завдяки цьому стандартний поріг фільтрації `<AppenderRef ref="TerminalConsole" level="info"/>` і `<Root level="info">` пропускає повідомлення `OK` без додаткових змін правил логування.
-- `ApisLevelBadgeConverter#isOkEvent(LogEvent)` також розпізнає події з маркером `"OK"`, якщо рівень події не вищий за `WARN`.
+- Priority **350** sits between `WARN` (`300`) and `INFO` (`400`).
+- Because it ranks above `INFO` (`400`), standard `<AppenderRef ref="TerminalConsole" level="info"/>` and `<Root level="info">` filters pass `OK` messages through without extra logger rules.
+- `ApisLevelBadgeConverter#isOkEvent(LogEvent)` also detects events carrying the `"OK"` marker when severity is not above `WARN`.
 
 ---
 
-## Шаблони `log4j2.xml` і конвертери
+## `log4j2.xml` Patterns & Converters
 
-### Консольний апендер (`TerminalConsole`)
+### Terminal Appender (`TerminalConsole`)
 
-У `log4j2.xml.patch` консольний вивід переведено на компактний патерн:
+`log4j2.xml.patch` uses compact patterns for console output:
 
-- **Стандартні логери:**
+- **Standard loggers:**
   ```text
   %highlightApis{[%d{HH:mm:ss}] %levelBadge [%logger] %msg%n%xEx{full}}
   ```
-- **Системні / Minecraft / Mojang логери** (без зайвого імені логера):
+- **System / Minecraft / Mojang loggers** (drops redundant logger name):
   ```text
   %highlightApis{[%d{HH:mm:ss}] %levelBadge %msg%n%xEx{full}}
   ```
 
-### Файловий апендер (`logs/latest.log`)
+### File Appender (`logs/latest.log`)
 
-Апендер `RollingRandomAccessFile name="File"` **не змінюється** - у файл логів і далі записується чистий текст без ANSI-керуючих послідовностей (`%stripAnsi{%msg}`) у стандартному форматі `[%d{HH:mm:ss}] [%t/%level]: ...`.
+`RollingRandomAccessFile name="File"` stays unchanged. Log files still receive clean plain text stripped of ANSI codes (`%stripAnsi{%msg}`) in the standard `[%d{HH:mm:ss}] [%t/%level]: ...` format.
 
 ---
 
-## Колірні схеми `%highlightApis` та `%levelBadge`
+## Color Rules for `%highlightApis` and `%levelBadge`
 
 ### `%highlightApis` (`ApisHighlightConverter`)
 
-Забарвлює весь рядок повідомлення, коли `TerminalConsoleAppender.isAnsiSupported()` повертає `true` (у кінці додається скидання `ESC[m`):
+Colors the entire log line when `TerminalConsoleAppender.isAnsiSupported()` is `true` and appends reset code `ESC[m`:
 
-| Рівень / Маркер | ANSI-код | Колір |
+| Level / Marker | ANSI Code | Color |
 | --- | --- | --- |
-| `ERROR` / `FATAL` | `ESC[31;1m` | Яскраво-червоний |
-| `WARN` | `ESC[33;1m` | Яскраво-жовтий |
-| `OK` (рівень або маркер) | `ESC[32;1m` | Яскраво-зелений |
-| `INFO`, `DEBUG` та інші | - | Стандартний колір термінала |
+| `ERROR` / `FATAL` | `ESC[31;1m` | Bright red |
+| `WARN` | `ESC[33;1m` | Bright yellow |
+| `OK` (level or marker) | `ESC[32;1m` | Bright green |
+| `INFO`, `DEBUG`, others | - | Default terminal foreground |
 
 ### `%levelBadge` (`ApisLevelBadgeConverter`)
 
-Формує контрастний бейдж із відновленням основного кольору рядка після бейджа:
+Builds a high-contrast level badge and restores the parent line color right after it:
 
-| Рівень | ANSI увімкнено | Без ANSI (`isAnsiSupported() == false`) |
+| Level | ANSI Enabled | Plain Text (`isAnsiSupported() == false`) |
 | --- | --- | --- |
-| `ERROR` / `FATAL` | `ESC[0;1;30;101m <LEVEL> ESC[0;31;1m` (чорний жирний текст на червоному фоні) | Чиста назва рівня (`ERROR` / `FATAL`) |
-| `WARN` | `ESC[0;1;30;103m <LEVEL> ESC[0;33;1m` (чорний жирний текст на жовтому фоні) | `WARN` |
-| `OK` | `ESC[0;1;30;102m OK ESC[0;32;1m` (чорний жирний текст на зеленому фоні) | `OK` |
-| `INFO` та інші | Назва рівня без бейджа (`INFO`) | Назва рівня без бейджа |
+| `ERROR` / `FATAL` | `ESC[0;1;30;101m <LEVEL> ESC[0;31;1m` (bold black on red) | Plain level (`ERROR` / `FATAL`) |
+| `WARN` | `ESC[0;1;30;103m <LEVEL> ESC[0;33;1m` (bold black on yellow) | `WARN` |
+| `OK` | `ESC[0;1;30;102m OK ESC[0;32;1m` (bold black on green) | `OK` |
+| `INFO` & others | Plain level name without badge (`INFO`) | Plain level name |
 
 ---
 
-## Ключові повідомлення ядра (`ApisLog.ok` і компактний `WARN`)
+## Core Log Messages (`ApisLog.ok` & Compact `WARN`)
 
-Наступні етапи запуску та діагностики логуються рівнем `OK`:
+Key startup and diagnostic events log at level `OK`:
 - `ApisConfig.loadEarly`: `Loaded <path> (active kill-switches: <N>)`
 - `DedicatedServer.java.patch`: `Done preparing level "<name>" (<time>s)`
 - `MinecraftServer.java.patch`: `Done (<time>s)! For help, type "help"`
-- `StandaloneWorldManager`: `Initialized standalone fallback world '...' at ...` та `Loaded standalone world '...' from ...`
+- `StandaloneWorldManager`: `Initialized standalone fallback world '...' at ...` and `Loaded standalone world '...' from ...`
 - `ApisHooks.tryBreakStaleSessionLock`: `Cleared stale session.lock for world '...' (previous process not running)`
 - `ApisDiagnostics.warnBlocked`: `Blocked plugin '<name>'|server call <ctx>(<target>) - disabled by <key> in apis.yml`
 
 :::note
-Багаторядкове попередження Paper про запуск в `online-mode=false` у `DedicatedServer.java.patch` скорочено до одного рядка `WARN`:
+The verbose multi-line Paper `online-mode=false` banner in `DedicatedServer.java.patch` is condensed into a single `WARN` line:
 - `Server running in offline mode behind <Velocity|BungeeCord> proxy (online-mode=false).`
-- або `Server running in offline/insecure mode without Mojang authentication (online-mode=false).`
+- or `Server running in offline/insecure mode without Mojang authentication (online-mode=false).`
 :::

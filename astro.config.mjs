@@ -12,6 +12,9 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "ApisMC",
+      components: {
+        SocialIcons: "./src/components/SocialIcons.astro",
+      },
       logo: {
         src: "./src/assets/icon.svg",
         replacesTitle: false,
@@ -19,21 +22,28 @@ export default defineConfig({
       defaultLocale: "root",
       locales: {
         root: {
+          label: "English",
+          lang: "en",
+        },
+        uk: {
           label: "Українська",
           lang: "uk",
         },
-        // Щоб увімкнути англійську версію, створіть дзеркальну структуру в src/content/docs/en/
-        // та розкоментуйте блок нижче:
-        // en: {
-        //   label: "English",
-        //   lang: "en",
-        // },
       },
       customCss: ["./src/styles/custom.css"],
       plugins: [
         starlightAutoSidebar(),
         starlightThemeBlack({
           navLinks: [
+            {
+              label: "Home",
+              link: "/",
+              attrs: { class: "apis-mobile-home-link" },
+            },
+            {
+              label: "Downloads",
+              link: "/downloads",
+            },
             {
               label: "AOT Guide",
               link: "/internals/aot",

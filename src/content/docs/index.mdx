@@ -1,89 +1,87 @@
 ---
 title: Apis
-description: Швидке ядро на базі Paper для Minecraft 26.3 та Java 25, створене для лобі, хабів і мініігор.
+description: Fast Paper-based core built for lobbies, hubs, and minigames.
 sidebar:
   hidden: true
 hero:
   title: Apis
-  tagline: Спеціалізований форк Paper для Minecraft 26.3 / Java 25 під лобі, хаби, черги та мініігри. Чистий старт до 2 секунд, вбудоване керування світами та вимкнення зайвих механік.
+  tagline: Paper fork tuned for lobbies, hubs, queues, and minigames. Clean startup under 2s, built-in world handling, and zero wasted vanilla ticks.
   image:
     file: ../../assets/icon.svg
   actions:
-    - text: Почати роботу
-      link: ./getting-started/migration/
+    - text: Download
+      link: /downloads/
       icon: right-arrow
       variant: primary
-    - text: Часті запитання (FAQ)
-      link: ./faq/
+    - text: Get Started
+      link: /getting-started/migration/
       variant: secondary
 ---
 
 import { Card, CardGrid, LinkCard, Tabs, TabItem } from "@astrojs/starlight/components";
 
-## Чому саме Apis
+## Why Apis
 
 <CardGrid>
-  <Card title="Сумісність із плагінами" icon="puzzle">
-    Усі плагіни під Bukkit, Spigot і Paper працюють без змін: публічний API збережено на 100%, а складні плагіни на кшталт ProtocolLib, GrimAC чи LuckPerms працюють стабільно й без модифікацій.
+  <Card title="Full Plugin Compatibility" icon="puzzle">
+    Bukkit, Spigot, and Paper plugins run out of the box. The public API stays intact, including packet-heavy plugins like ProtocolLib, GrimAC, and LuckPerms.
   </Card>
-  <Card title="Вимкнення зайвих механік" icon="setting">
-    У [configs/apis.yml](./configuration/apis-config/) можна вимкнути все, що не потрібне на лобі чи арені: AI мобів, редстоун, фізику блоків, досягнення, рецепти чи збереження світу - без падінь і помилок у плагінах.
+  <Card title="System Kill-Switches" icon="setting">
+    Disable unused mechanics in [configs/apis.yml](/configuration/apis-config/): mob AI, redstone, block physics, advancements, recipes, or disk world saving, without plugin NPEs.
   </Card>
-  <Card title="Швидкий запуск і низьке навантаження" icon="rocket">
-    Чистий старт менш ніж за 2 секунди, адаптована структура для спрощеної генерації [Java 25 AOT-кешу](./internals/aot/) та оптимізована мережева підсистема під високий онлайн.
+  <Card title="Fast Boot & Low Overhead" icon="rocket">
+    Clean boot takes under 2 seconds. Built-in manifest classpath works directly with [Java 25+ AOT Cache](/internals/aot/), alongside optimized networking for high player counts.
   </Card>
-  <Card title="Вбудовані світи замість Multiverse" icon="open-book">
-    Окрема тека [worlds/](./worlds/standalone-mode/) з порожнім Void-світом, файлом `world.yml` для спавну та режиму гри, командами `/world` і `/tpworld`, а також роботою без запису на диск.
+  <Card title="Built-in Worlds (No Multiverse)" icon="open-book">
+    Isolated [worlds/](/worlds/standalone-mode/) directory with Void generation, per-world `world.yml` config for spawn/gamemode, `/world` + `/tpworld` commands, and optional RAM-only mode.
   </Card>
 </CardGrid>
 
-## Apis проти Paper на практиці
+## Apis vs Paper in Practice
 
-Звичайний Paper тримає активними всі системи ванільного виживання навіть на серверах, де вони не потрібні - у лобі, хабах, чергах або мінііграх. У тестах на однаковому наборі з 9 плагінів (`LuckPerms`, `TAB`, `Skript`, `WorldEdit`, `GrimAC`, `ViaVersion`, `PacketEvents`) у Docker (`4 vCPU`, `4 GiB RAM`, `Java 25` з AOT):
+Stock Paper keeps full survival systems running even on servers that do not need them - lobbies, hubs, queues, or minigames. Tested with the same 9-plugin stack (`LuckPerms`, `TAB`, `Skript`, `WorldEdit`, `GrimAC`, `ViaVersion`, `PacketEvents`) in Docker (`4 vCPU`, `4 GiB RAM`, `Java 25` with AOT):
 
 <Tabs>
-  <TabItem label="Витривалість (до 350 гравців)">
-    ![TPS і затримка тіку Paper проти Apis на 100, 150, 200, 300 і 350 гравцях](../../assets/charts/scaling.svg)
+  <TabItem label="Scaling (up to 350 players)">
+    ![Paper vs Apis TPS and tick latency across 100, 150, 200, 300, and 350 players](../../assets/charts/en/scaling.svg)
   </TabItem>
-  <TabItem label="Стабільність при 100 гравцях">
-    ![Порівняння відгуку, навантаження CPU, пам'яті та фризів при 100 гравцях](../../assets/charts/plateau-100.svg)
+  <TabItem label="Stability at 100 players">
+    ![Tick latency, CPU usage, live heap, and GC pause comparison at 100 players](../../assets/charts/en/plateau-100.svg)
   </TabItem>
-  <TabItem label="Швидкість запуску та пам'ять">
-    ![Порівняння швидкості запуску з плагінами, чистого запуску та економії пам'яті без гравців](../../assets/charts/boot-ram.svg)
+  <TabItem label="Boot Time & Idle RAM">
+    ![Boot time with plugins, clean boot time, and idle memory savings comparison](../../assets/charts/en/boot-ram.svg)
   </TabItem>
 </Tabs>
 
-| Spark-профіль | Посилання |
+| Spark Profile | Link |
 | --- | --- |
-| 350 ботів, кроковий тест | <a href="https://spark.lucko.me/OLVVRmk3ST" target="_blank" rel="noopener noreferrer">spark.lucko.me/OLVVRmk3ST</a> |
-| Прямий вхід 250 ботів #1 | <a href="https://spark.lucko.me/rzHe0FAdrg" target="_blank" rel="noopener noreferrer">spark.lucko.me/rzHe0FAdrg</a> |
-| Прямий вхід 250 ботів #2 | <a href="https://spark.lucko.me/YY7uUqBydH" target="_blank" rel="noopener noreferrer">spark.lucko.me/YY7uUqBydH</a> |
-| Прямий вхід 250 ботів #3 | <a href="https://spark.lucko.me/a7dZyQC10D" target="_blank" rel="noopener noreferrer">spark.lucko.me/a7dZyQC10D</a> |
-| Швидкий вхід 250 ботів (`12/с`) | <a href="https://spark.lucko.me/3BNUnI8mob" target="_blank" rel="noopener noreferrer">spark.lucko.me/3BNUnI8mob</a> |
+| 350 bots step test | <a href="https://spark.lucko.me/OLVVRmk3ST" target="_blank" rel="noopener noreferrer">spark.lucko.me/OLVVRmk3ST</a> |
+| Direct join 250 bots #1 | <a href="https://spark.lucko.me/rzHe0FAdrg" target="_blank" rel="noopener noreferrer">spark.lucko.me/rzHe0FAdrg</a> |
+| Direct join 250 bots #2 | <a href="https://spark.lucko.me/YY7uUqBydH" target="_blank" rel="noopener noreferrer">spark.lucko.me/YY7uUqBydH</a> |
+| Direct join 250 bots #3 | <a href="https://spark.lucko.me/a7dZyQC10D" target="_blank" rel="noopener noreferrer">spark.lucko.me/a7dZyQC10D</a> |
+| Fast join 250 bots (`12/s`) | <a href="https://spark.lucko.me/3BNUnI8mob" target="_blank" rel="noopener noreferrer">spark.lucko.me/3BNUnI8mob</a> |
 
-Усі деталі методики та повні результати тестів дивіться у статті [Вплив плагінів та реальні бенчмарки](./practice/plugins-impact/).
-
-
+See the full methodology and raw numbers in [Plugin Impact & Benchmarks](/practice/plugins-impact/).
 
 <CardGrid>
   <LinkCard
-    title="Міграція з Paper / Purpur"
-    description="Як перенести наявний сервер на нову структуру папок."
-    href="./getting-started/migration/"
+    title="Migrating from Paper"
+    description="Step-by-step guide to moving an existing server to Apis directory layout."
+    href="/getting-started/migration/"
   />
   <LinkCard
-    title="Структура каталогів та CLI-прапорці"
-    description="Призначення configs/, addons/, plugins/, users/, cache/ і прапорців запуску."
-    href="./getting-started/directory-structure/"
+    title="Directory Structure & CLI Flags"
+    description="Layout of configs/, addons/, plugins/, users/, cache/, and startup args."
+    href="/getting-started/directory-structure/"
   />
   <LinkCard
-    title="Налаштування configs/apis.yml"
-    description="Довідник усіх параметрів ядра та синхронізація ApisConfigSync."
-    href="./configuration/apis-config/"
+    title="configs/apis.yml Reference"
+    description="All core toggles, defaults, and ApisConfigSync rules."
+    href="/configuration/apis-config/"
   />
   <LinkCard
-    title="Вимкнення систем (Kill-Switches)"
-    description="Які механіки можна вимкнути та як гарантується сумісність із плагінами."
-    href="./configuration/kill-switches/"
+    title="Kill-Switches Internals"
+    description="What each toggle disables and how fallback objects prevent plugin crashes."
+    href="/configuration/kill-switches/"
   />
 </CardGrid>

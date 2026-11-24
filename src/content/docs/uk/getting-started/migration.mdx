@@ -1,15 +1,15 @@
 ---
-title: Міграція з Paper / Purpur
-description: Покроковий перехід існуючого сервера Paper або Purpur на ядро Apis без втрати світів, конфігів і даних плагінів.
+title: Міграція з Paper
+description: Покроковий перехід існуючого сервера Paper на ядро Apis без втрати світів, конфігів і даних плагінів.
 sidebar:
   order: 1
 ---
 
-Apis розроблений як пряма заміна Paper або Purpur зі збереженням сумісності світів і плагінів. Головна відмінність при переході - **розподіл файлів по окремих папках**, щоб корінь сервера залишався чистим.
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-## Що змінюється після Paper / Purpur
+## Що змінюється після Paper
 
-| Що саме | Paper / Purpur | Apis (за замовчуванням) |
+| Що саме | Paper | Apis (за замовчуванням) |
 | --- | --- | --- |
 | **Конфіги сервера** | Корінь сервера та `config/` | `configs/` (`--configs-dir`) |
 | **JAR-файли плагінів** | `plugins/*.jar` | `addons/*.jar` (`--addons-dir`) |
@@ -28,12 +28,14 @@ Apis розроблений як пряма заміна Paper або Purpur з�
 
 ### Крок 2. Заміна JAR-файлу ядра
 
-Видаліть старий JAR (`paper-*.jar` або `purpur-*.jar`) і покладіть релізний JAR Apis (`apis-paperclip-26.3-release.jar` із `github.com/ApisMC/Apis`) у корінь сервера.
+Видаліть старий JAR (`paper-*.jar`) і покладіть релізний JAR Apis (`apis-paperclip-<version>-release.jar` із `github.com/ApisMC/Apis`) у корінь сервера.
 
 ### Крок 3. Перенесення конфігів у `configs/`
 
 Створіть папку `configs/` і перемістіть туди налаштування сервера:
 
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
 ```bash
 mkdir -p configs
 mv server.properties bukkit.yml spigot.yml commands.yml help.yml permissions.yml configs/ 2>/dev/null || true
@@ -44,6 +46,20 @@ if [ -d config ]; then
   rmdir config
 fi
 ```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+New-Item -ItemType Directory -Force configs | Out-Null
+Move-Item -ErrorAction SilentlyContinue server.properties, bukkit.yml, spigot.yml, commands.yml, help.yml, permissions.yml configs/
+
+# Якщо використовувалися конфіги Paper із папки config/
+if (Test-Path config) {
+  Move-Item -ErrorAction SilentlyContinue config/* configs/
+  Remove-Item -ErrorAction SilentlyContinue config
+}
+```
+  </TabItem>
+</Tabs>
 
 :::note
 Під час першого запуску Apis автоматично прибере дублюючі налаштування зі старих конфігів (`allow-nether`, `spawn-monsters` у `server.properties`, `allow-end` у `bukkit.yml` тощо), щоб усіма вимикачами можна було керувати з одного файлу `configs/apis.yml`.
@@ -53,6 +69,8 @@ fi
 
 Перенесіть самі `.jar`-файли плагінів у `addons/`, залишивши всі теки з конфігами та базами даних у `plugins/`:
 
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
 ```bash
 mkdir -p addons addons/update
 mv plugins/*.jar addons/ 2>/dev/null || true
@@ -63,6 +81,20 @@ if [ -d plugins/update ]; then
   rmdir plugins/update 2>/dev/null || true
 fi
 ```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+New-Item -ItemType Directory -Force addons, addons/update | Out-Null
+Move-Item -ErrorAction SilentlyContinue plugins/*.jar addons/
+
+# Якщо є невиконані оновлення плагінів
+if (Test-Path plugins/update) {
+  Move-Item -ErrorAction SilentlyContinue plugins/update/* addons/update/
+  Remove-Item -ErrorAction SilentlyContinue plugins/update
+}
+```
+  </TabItem>
+</Tabs>
 
 ### Крок 5. Перенесення світів та списків гравців
 
@@ -80,7 +112,7 @@ fi
 ### Крок 6. Запуск і перевірка
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar apis-paperclip-26.3-release.jar --nogui
+java --enable-native-access=ALL-UNNAMED -jar apis-paperclip-<version>-release.jar --nogui
 ```
 
 Перевірте активні параметри командою `/apis status`.

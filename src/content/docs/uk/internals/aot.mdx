@@ -1,0 +1,156 @@
+---
+title: Java 25+ AOT
+description: Налаштування профілю AOT-кешу для Java 25+ та швидкий прямий запуск сервера Apis без ручного збирання classpath.
+sidebar:
+  hidden: false
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Apis підтримує **Ahead-of-Time (AOT) Cache** на **Java 25 і новіше** (Java 25, 26, 27+) прямо «з коробки» без окремих shell-скриптів перебору `libraries/*.jar` чи сторонніх лончерів.
+
+## Чому AOT працює в Apis без додаткового налаштування
+
+1. У маніфесті `META-INF/MANIFEST.MF` серверного JAR (`versions/<mcVersion>/apis-<mcVersion>.jar`) прописано:
+   - `Main-Class: org.bukkit.craftbukkit.Main`
+   - `Multi-Release: true`
+   - **`Class-Path`** - повний відносний список усіх залежностей `runtimeClasspath` (включно з `apis-api`) у форматі `../../libraries/<group>/<module>/<version>/<fileName>`, що точно збігається з розкладкою `libraries/` після першого запуску Paperclip.
+2. Задачі пакування (`CreateBundlerJar`) також додають атрибут `Enable-Native-Access: ALL-UNNAMED`.
+3. Для звичайного запуску через Paperclip лончер використовує `cache/.paperclip-stamp` (`PaperclipStamp`) - перевірка `size`, `mtimeMillis` і SHA-256 маніфестів пропускає повторне хешування ~100 МБ залежностей.
+
+:::note
+Перед записом AOT-профілю обов'язково виконайте один стартовий запуск Paperclip JAR (`java --enable-native-access=ALL-UNNAMED -jar apis-paperclip-<mcVersion>-release.jar --nogui`), щоб лончер розпакував `versions/<mcVersion>/apis-<mcVersion>.jar` та каталог `libraries/`.
+:::
+
+---
+
+## Крок 1. Автоматичне створення AOT-конфігурації та кешу
+
+Скрипт видаляє старий кеш, запускає сервер для запису профілю (`-XX:AOTMode=record`), автоматично надсилає `stop` після появи `Done (` у логах і компілює `cache/apis-cp.aot`:
+
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
+```bash title="aot.sh"
+#!/bin/sh
+set -e
+
+mkdir -p cache logs
+rm -f cache/apis-cp.aot cache/apis-cp.aotconfig /tmp/apis_aot
+: > logs/latest.log
+
+mkfifo /tmp/apis_aot
+exec 3<>/tmp/apis_aot
+
+(
+  while ! grep -q "Done (" logs/latest.log 2>/dev/null; do
+    sleep 0.2
+  done
+  sleep 1
+  echo "stop" >&3
+) &
+
+java \
+  -Xms2G -Xmx3G \
+  -XX:+UseG1GC -XX:MaxGCPauseMillis=20 \
+  --enable-native-access=ALL-UNNAMED \
+  -XX:AOTMode=record \
+  -XX:AOTConfiguration="cache/apis-cp.aotconfig" \
+  -cp "versions/<mcVersion>/apis-<mcVersion>.jar" \
+  org.bukkit.craftbukkit.Main --nogui </tmp/apis_aot
+
+exec 3>&-
+rm -f /tmp/apis_aot
+
+java \
+  -XX:+UseG1GC -XX:MaxGCPauseMillis=20 \
+  --enable-native-access=ALL-UNNAMED \
+  -XX:AOTMode=create \
+  -XX:AOTConfiguration="cache/apis-cp.aotconfig" \
+  -XX:AOTCache="cache/apis-cp.aot" \
+  -cp "versions/<mcVersion>/apis-<mcVersion>.jar"
+```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell title="aot.ps1"
+New-Item -ItemType Directory -Force cache, logs | Out-Null
+Remove-Item -Force -ErrorAction SilentlyContinue cache/apis-cp.aot, cache/apis-cp.aotconfig
+New-Item -ItemType File -Force logs/latest.log | Out-Null
+
+$p = New-Object System.Diagnostics.Process
+$p.StartInfo.FileName = "java"
+$p.StartInfo.Arguments = '-Xms2G -Xmx3G -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -Dfile.encoding=UTF-8 --enable-native-access=ALL-UNNAMED -XX:AOTMode=record -XX:AOTConfiguration="cache/apis-cp.aotconfig" -cp "versions/<mcVersion>/apis-<mcVersion>.jar" org.bukkit.craftbukkit.Main --nogui'
+$p.StartInfo.UseShellExecute = $false
+$p.StartInfo.RedirectStandardInput = $true
+$p.Start() | Out-Null
+
+while (-not $p.HasExited -and -not (Select-String -Path logs/latest.log -Pattern "Done \(" -Quiet)) {
+  Start-Sleep -Milliseconds 200
+}
+if (-not $p.HasExited) {
+  Start-Sleep -Seconds 1
+  $p.StandardInput.WriteLine("stop")
+}
+$p.WaitForExit()
+
+java `
+  -XX:+UseG1GC -XX:MaxGCPauseMillis=20 `
+  --enable-native-access=ALL-UNNAMED `
+  -XX:AOTMode=create `
+  -XX:AOTConfiguration="cache/apis-cp.aotconfig" `
+  -XX:AOTCache="cache/apis-cp.aot" `
+  -cp "versions/<mcVersion>/apis-<mcVersion>.jar"
+```
+  </TabItem>
+</Tabs>
+
+:::tip
+Якщо в сервері активовані kill-switch-прапорці у [configs/apis.yml](/uk/configuration/apis-config/) (наприклад, `startup.datafixers: false` або `caches.eager-blockstate-cache: false`), налаштуйте їх **до** етапу `record`. Так AOT-кеш зафіксує точний мінімальний набір класів без зайвих схем DFU.
+:::
+
+---
+
+## Крок 2. Продакшн-запуск із `AOTCache`
+
+Після генерації `cache/apis-cp.aot` достатньо простого запуску напряму з кешем:
+
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
+```bash title="start.sh"
+#!/bin/sh
+set -e
+
+exec java \
+  -XX:ThreadPriorityPolicy=1 \
+  -Xms2G -Xmx3G \
+  -XX:+UseG1GC -XX:MaxGCPauseMillis=50 \
+  -Dfile.encoding=UTF-8 \
+  --enable-native-access=ALL-UNNAMED \
+  -XX:AOTCache="cache/apis-cp.aot" \
+  -cp "versions/<mcVersion>/apis-<mcVersion>.jar" \
+  org.bukkit.craftbukkit.Main --nogui
+```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell title="start.ps1"
+java `
+  -Xms2G -Xmx3G `
+  -XX:+UseG1GC -XX:MaxGCPauseMillis=50 `
+  -Dfile.encoding=UTF-8 `
+  --enable-native-access=ALL-UNNAMED `
+  -XX:AOTCache="cache/apis-cp.aot" `
+  -cp "versions/<mcVersion>/apis-<mcVersion>.jar" `
+  org.bukkit.craftbukkit.Main --nogui
+```
+  </TabItem>
+</Tabs>
+
+:::caution
+При оновленні збірки Apis або зміні версії Java перезбирайте `cache/apis-cp.aot` заново. Якщо нативні бібліотеки або JVM не збігаються з тими, на яких створювався кеш, JVM проігнорує `AOTCache` або видасть попередження.
+:::
+
+## Порівняння режимів запуску
+
+| Режим | Команда запуску | Призначення |
+| --- | --- | --- |
+| **Стандартний Paperclip** | `java --enable-native-access=ALL-UNNAMED -jar apis-paperclip-*.jar --nogui` | Перше розпакування `versions/` та `libraries/`, прості оновлення з перевіркою `cache/.paperclip-stamp` |
+| **Прямий AOT (`AOTCache`)** | `java -XX:AOTCache=cache/apis-cp.aot --enable-native-access=ALL-UNNAMED -cp versions/<mcVersion>/apis-<mcVersion>.jar org.bukkit.craftbukkit.Main --nogui` | Максимально швидкий холодний старт та прогрів у Docker/Kubernetes-контейнерах |

@@ -1,219 +1,219 @@
 ---
-title: Структура каталогів та CLI-прапорці
-description: Організація файлової системи сервера Apis (configs/, addons/, plugins/, users/, worlds/, cache/) та аргументи запуску.
+title: Directory Structure & CLI Flags
+description: Filesystem layout in Apis (configs/, addons/, plugins/, users/, worlds/, cache/) and startup CLI flags.
 sidebar:
   order: 2
 ---
 
 import { File, FileExplorer, Folder } from "starlight-file-explorer";
 
-У стандартному Paper конфіги, світи, JAR-файли плагінів і тимчасові файли перемішані в корені сервера. Apis розкладає все по окремих теках, щоб сервером було зручніше керувати та зберігати конфігурацію в Git.
+Standard Paper mixes server configs, worlds, plugin JARs, and runtime files together in the root directory. Apis separates them into dedicated directories so the repo stays clean and configs are easy to track in Git.
 
-<FileExplorer label="Структура сервера Apis">
+<FileExplorer label="Apis Server Layout">
   <Folder
     name="addons"
     collapsed
     badges={[{ text: "--addons-dir", variant: "note" }]}
-    description="Виключно виконувані .jar-файли плагінів."
+    description="Executable plugin .jar files only."
   >
-    Єдина директорія, з якої завантажуються JAR-архіви плагінів. Додаткові JAR можна також передавати через `--add-plugin` або `--add-extra-plugin-jar`.
+    The only directory Apis loads plugin JARs from. Extra JARs can also be passed via `--add-plugin` or `--add-extra-plugin-jar`.
     <Folder
       name="update"
       collapsed
-      description="Директорія відкладених оновлень плагінів (addons/update/)."
+      description="Staged plugin updates directory (addons/update/)."
     >
-      Якщо тека порожня, Apis кешує це і не перевідкриває JAR-архіви плагінів під час наступного старту.
+      If empty, Apis remembers this and skips re-scanning plugin archives on startup.
     </Folder>
     <File
       name="MyHubPlugin.jar"
-      description="Приклад JAR-файлу плагіна."
+      description="Example plugin JAR."
     >
-      Код плагінів лежить у `addons/`, але його конфігурація та дані створюються в `plugins/MyHubPlugin/`.
+      Plugin binaries live in `addons/`, while configs and databases still go into `plugins/MyHubPlugin/`.
     </File>
   </Folder>
   <Folder
     name="cache"
     collapsed
-    description="Службові кеші запуску, нативних бібліотек і AOT."
+    description="Boot caches, extracted natives, and AOT files."
   >
     <Folder
       name="natives"
       collapsed
-      description="Постійний кеш розпакованих нативних бібліотек (.so / .dylib)."
+      description="Persistent cache of extracted native libraries (.so / .dylib)."
     />
     <File
       name=".paperclip-stamp"
-      description="Кеш розміру, mtime та SHA-256 маніфестів Paperclip."
+      description="Size, mtime, and SHA-256 cache for Paperclip manifests."
     >
-      Дозволяє пропускати повторне хешування залежностей під час перезапусків.
+      Skips re-hashing ~100 MB of dependencies on restarts when files have not changed.
     </File>
   </Folder>
   <Folder
     name="configs"
     collapsed
     badges={[{ text: "--configs-dir", variant: "note" }]}
-    description="Усі конфігураційні файли ядра в одному каталозі."
+    description="All server config files in one directory."
   >
-    Директорія централізованого зберігання налаштувань сервера. Зручно тримати під контролем версій у Git.
+    Central directory for server configuration. Easy to version-control in Git.
     <File
       name="apis.yml"
       badges={[{ text: "-Dapis.config", variant: "note" }]}
-      description="Головна конфігурація Apis: вимикачі систем, режими світів, мережеві ліміти та повідомлення."
+      description="Main Apis config: kill-switches, world modes, network limits, and messages."
     >
-      Єдине джерело налаштувань для `FeatureRegistry` та `ApisConfigSync`. Повний перелік ключів дивіться в [довіднику configs/apis.yml](../../configuration/apis-config/).
+      Single source of truth for `FeatureRegistry` and `ApisConfigSync`. See the full [configs/apis.yml reference](/configuration/apis-config/).
     </File>
     <File
       name="bukkit.yml"
       badges={[{ text: "-b / --bukkit-settings", variant: "default" }]}
-      description="Конфігурація Bukkit (перенесена з кореня в configs/)."
+      description="Bukkit config (moved from root into configs/)."
     >
-      Параметр `settings.allow-end` керується через `dimensions.enabled` у `configs/apis.yml`.
+      `settings.allow-end` is controlled via `dimensions.enabled` in `configs/apis.yml`.
     </File>
     <File
       name="commands.yml"
       badges={[{ text: "-C / --commands-settings", variant: "default" }]}
-      description="Аліаси команд Bukkit."
+      description="Bukkit command aliases."
     />
     <File
       name="help.yml"
-      description="Налаштування стандартної довідки /help."
+      description="Default /help topic configuration."
     />
     <File
       name="paper-global.yml"
-      description="Глобальні налаштування Paper (перенесено з config/ у configs/)."
+      description="Global Paper settings (moved from config/ into configs/)."
     />
     <File
       name="paper-world-defaults.yml"
-      description="Стандартні налаштування світів Paper."
+      description="Default Paper world settings."
     />
     <File
       name="paper.yml"
       badges={[{ text: "--paper", variant: "default" }]}
-      description="Legacy-конфігурація Paper (за наявності)."
+      description="Legacy Paper config (if present)."
     />
     <File
       name="permissions.yml"
-      description="Базові групи прав Bukkit."
+      description="Basic Bukkit permission nodes."
     />
     <File
       name="server.properties"
       badges={[{ text: "-c / --config", variant: "default" }]}
-      description="Базові налаштування сервера Minecraft (порт, MOTD, max-players тощо)."
+      description="Core Minecraft server properties (port, MOTD, max-players, etc.)."
     >
-      Дублюючі ключі (`allow-nether`, `spawn-monsters`, `spawn-animals`, `spawn-npcs`) автоматично вилучаються на користь `configs/apis.yml`.
+      Duplicate keys (`allow-nether`, `spawn-monsters`, `spawn-animals`, `spawn-npcs`) are stripped automatically in favor of `configs/apis.yml`.
     </File>
     <File
       name="spigot.yml"
       badges={[{ text: "-S / --spigot-settings", variant: "default" }]}
-      description="Конфігурація Spigot (перенесена з кореня в configs/)."
+      description="Spigot config (moved from root into configs/)."
     >
-      Поля `advancements.*` та `players.disable-saving` синхронізуються з `configs/apis.yml`.
+      `advancements.*` and `players.disable-saving` stay synced with `configs/apis.yml`.
     </File>
   </Folder>
-  <Folder name="libraries" collapsed description="Розпаковані Paperclip залежності сервера." />
-  <Folder name="logs" collapsed description="Лог-файли сервера (latest.log та архіви)." />
+  <Folder name="libraries" collapsed description="Extracted Paperclip runtime libraries." />
+  <Folder name="logs" collapsed description="Server log files (latest.log and archives)." />
   <Folder
     name="plugins"
     collapsed
     badges={[{ text: "-P / --plugins", variant: "note" }]}
-    description="Виключно теки даних і конфігурацій плагінів."
+    description="Plugin config folders and databases only."
   >
-    Усі плагіни створюють свої робочі директорії саме тут. **JAR-файли, покладені в `plugins/`, ігноруються й не запускаються.**
-    <Folder name="bStats" collapsed description="Конфігурація та дані метрик bStats." />
-    <Folder name="MyHubPlugin" collapsed description="Конфіги та бази даних плагіна MyHubPlugin." />
-    <Folder name="spark" collapsed description="Дані профілювання Spark (коли analytics.spark: true)." />
+    Plugins create their working data directories here. **JAR files left inside `plugins/` are ignored.**
+    <Folder name="bStats" collapsed description="bStats metrics config and data." />
+    <Folder name="MyHubPlugin" collapsed description="MyHubPlugin configs and databases." />
+    <Folder name="spark" collapsed description="Spark profiler data (when analytics.spark: true)." />
   </Folder>
   <Folder
     name="users"
     collapsed
-    description="Списки гравців і кеш профілів."
+    description="Player lists and UUID cache."
   >
-    Якщо файли вже існують у корені сервера зі старих версій, Apis підхопить їх; інакше вони створюються в `users/`.
-    <File name="banned-ips.json" description="Список заблокованих IP-адрес." />
-    <File name="banned-players.json" description="Список заблокованих гравців." />
-    <File name="ops.json" description="Список операторів сервера." />
-    <File name="usercache.json" description="Локальний кеш UUID та імен гравців." />
-    <File name="whitelist.json" description="Білий список гравців." />
+    If these files already exist in root from an older server setup, Apis picks them up; otherwise it creates them in `users/`.
+    <File name="banned-ips.json" description="Banned IP addresses." />
+    <File name="banned-players.json" description="Banned players." />
+    <File name="ops.json" description="Server operators." />
+    <File name="usercache.json" description="Local player name/UUID cache." />
+    <File name="whitelist.json" description="Server whitelist." />
   </Folder>
-  <Folder name="versions" collapsed description="Розпакований серверний JAR (versions/26.3/apis-26.3.jar)." />
+  <Folder name="versions" collapsed description="Extracted server JAR (versions/<version>/apis-<version>.jar)." />
   <Folder
     name="worlds"
     collapsed
     badges={[{ text: "--worlds-dir", variant: "note" }]}
-    description="Ізольований контейнер усіх світів сервера."
+    description="Isolated container for all server worlds."
   >
-    Замість розкиданих по кореню папок `world/`, `world_nether/`, `world_the_end/`, усі світи зберігаються всередині `worlds/`.
-    <Folder name="arena_01" collapsed description="Додатковий світ, який автоматично підвантажується у standalone-режимі.">
-      <File name="world.yml" description="Індивідуальні координати спавну та режим гри арени." />
+    Replaces scattered `world/`, `world_nether/`, `world_the_end/` folders in root.
+    <Folder name="arena_01" collapsed description="Extra world auto-loaded in standalone mode.">
+      <File name="world.yml" description="Per-world spawn coordinates and game mode." />
     </Folder>
-    <Folder name="hub" collapsed description="Основний світ за замовчуванням (dimensions.fallback-world).">
-      <File name="world.yml" description="Спавн, force-spawn та default-game-mode світу hub." />
+    <Folder name="hub" collapsed description="Default primary world (dimensions.fallback-world).">
+      <File name="world.yml" description="Spawn, force-spawn, and default-game-mode for hub." />
     </Folder>
   </Folder>
   <File
     name=".gitignore"
     selected
-    badges={[{ text: "Автогенерація", variant: "tip" }]}
-    description="Стандартні правила Git для чистого репозиторію конфігурацій."
+    badges={[{ text: "Auto-generated", variant: "tip" }]}
+    description="Default Git ignore rules for keeping configs clean."
   >
-    Якщо в корені сервера немає `.gitignore`, Apis створює його автоматично: ігнорує `*.jar`, `libraries/`, `versions/`, `logs/`, `crash-reports/`, `debug/`, `session.lock`, `world*/`, `plugins/`, `users/usercache.json`, але зберігає `configs/` та сам `.gitignore`.
+    If `.gitignore` is missing in root, Apis writes one that ignores `*.jar`, `libraries/`, `versions/`, `logs/`, `crash-reports/`, `debug/`, `session.lock`, `world*/`, `plugins/`, and `users/usercache.json` while keeping `configs/` and `.gitignore` tracked.
   </File>
   <File
-    name="apis-paperclip-26.3-release.jar"
-    description="Виконуваний Paperclip JAR для запуску й розпакування сервера."
+    name="apis-paperclip-<version>-release.jar"
+    description="Executable Paperclip launcher JAR."
   >
-    Основний артефакт запуску. Під час першого старту розпаковує залежності в `libraries/` та серверний JAR у `versions/`, а на наступних запусках перевіряє цілісність через `cache/.paperclip-stamp`.
+    Main launcher binary. Unpacks dependencies into `libraries/` and the core JAR into `versions/` on first boot, then validates stamps via `cache/.paperclip-stamp`.
   </File>
 </FileExplorer>
 
 ---
 
-## Призначення директорій
+## Directory Roles
 
 ### `configs/` (`--configs-dir`)
 
-Єдина папка для всіх налаштувань сервера:
-- `apis.yml` (шлях можна також задати через `-Dapis.config=<шлях>`);
-- `server.properties`, `bukkit.yml`, `spigot.yml`, `commands.yml`, `permissions.yml`, `help.yml`;
-- `paper.yml`, `paper-global.yml`, `paper-world-defaults.yml`.
+Single directory for all server config files:
+- `apis.yml` (can also be set via `-Dapis.config=<path>`)
+- `server.properties`, `bukkit.yml`, `spigot.yml`, `commands.yml`, `permissions.yml`, `help.yml`
+- `paper.yml`, `paper-global.yml`, `paper-world-defaults.yml`
 
-### `addons/` (`--addons-dir`) та `plugins/` (`-P` / `--plugins`)
+### `addons/` (`--addons-dir`) and `plugins/` (`-P` / `--plugins`)
 
-В Apis виконуваний код плагінів відокремлений від їхніх налаштувань:
-- **`addons/`** - єдина папка, звідки завантажуються `.jar`-файли плагінів. Папка відкладених оновлень (`update-folder`) також знаходиться тут - `addons/update/`.
-- **`plugins/`** - папка для конфігів і баз даних (`plugins/<PluginName>/`). **JAR-файли, залишені всередині `plugins/`, ігноруються й не запускаються.**
+Apis splits executable JARs from plugin data:
+- **`addons/`** - only directory scanned for plugin `.jar` files. Deferred updates go in `addons/update/`.
+- **`plugins/`** - holds plugin configs and databases (`plugins/<PluginName>/`). **JAR files left in `plugins/` are skipped.**
 
 :::tip
-Якщо папка `addons/update/` порожня, Apis запам'ятовує це й не витрачає час на повторне відкриття JAR-архівів під час старту.
+When `addons/update/` is empty, Apis skips opening plugin archives to check for updates on future starts.
 :::
 
 ### `users/`
 
-Файли `usercache.json`, `ops.json`, `whitelist.json`, `banned-players.json` та `banned-ips.json` зберігаються в `users/`. Якщо ці файли вже лежать у корені сервера з попередніх версій, Apis автоматично використає їх для сумісності.
+`usercache.json`, `ops.json`, `whitelist.json`, `banned-players.json`, and `banned-ips.json` live in `users/`. If any already exist in root from a previous Paper setup, Apis reads those automatically for compatibility.
 
 ### `cache/`
 
-- **`cache/natives/`** - постійне сховище розпакованих нативних бібліотек (`so`/`dylib`), щоб не витягувати їх заново при кожному запуску.
-- **`cache/.paperclip-stamp`** - кеш перевірки цілісності бібліотек, який пропускає зайвий перерахунок SHA-256 при старті.
+- **`cache/natives/`** - persistent cache for unpacked native libraries (`so`/`dylib`) so they are not re-extracted on every boot.
+- **`cache/.paperclip-stamp`** - dependency integrity stamp that skips redundant SHA-256 hashing at startup.
 
 ---
 
-## Аргументи командного рядка (CLI-прапорці)
+## CLI Flags
 
-| Прапорець | За замовчуванням | Опис |
+| Flag | Default | Description |
 | --- | --- | --- |
-| `--configs-dir <Path>` | `configs` | Папка конфігурацій сервера |
-| `--worlds-dir <Path>` | `worlds` | Контейнер світів |
-| `--addons-dir <Path>` | `addons` | Папка для `.jar`-файлів плагінів та `update/` |
-| `-P`, `--plugins <File>` | `plugins` | Папка для конфігів і даних плагінів |
-| `-c`, `--config <File>` | `configs/server.properties` | Шлях до `server.properties` |
-| `-b`, `--bukkit-settings <File>` | `configs/bukkit.yml` | Шлях до `bukkit.yml` |
-| `-C`, `--commands-settings <File>` | `configs/commands.yml` | Шлях до `commands.yml` |
-| `-S`, `--spigot-settings <File>` | `configs/spigot.yml` | Шлях до `spigot.yml` |
-| `--paper`, `--paper-settings <File>` | `configs/paper.yml` | Шлях до legacy `paper.yml` |
-| `--add-plugin`, `--add-extra-plugin-jar` | - | Додаткові JAR-файли плагінів поза `addons/` |
-| `-Dapis.config=<Path>` | `configs/apis.yml` | Системна властивість JVM для власного шляху до `apis.yml` |
+| `--configs-dir <Path>` | `configs` | Server config directory |
+| `--worlds-dir <Path>` | `worlds` | Worlds container directory |
+| `--addons-dir <Path>` | `addons` | Plugin `.jar` & `update/` directory |
+| `-P`, `--plugins <File>` | `plugins` | Plugin configs & data directory |
+| `-c`, `--config <File>` | `configs/server.properties` | Path to `server.properties` |
+| `-b`, `--bukkit-settings <File>` | `configs/bukkit.yml` | Path to `bukkit.yml` |
+| `-C`, `--commands-settings <File>` | `configs/commands.yml` | Path to `commands.yml` |
+| `-S`, `--spigot-settings <File>` | `configs/spigot.yml` | Path to `spigot.yml` |
+| `--paper`, `--paper-settings <File>` | `configs/paper.yml` | Path to legacy `paper.yml` |
+| `--add-plugin`, `--add-extra-plugin-jar` | - | Extra plugin JARs outside `addons/` |
+| `-Dapis.config=<Path>` | `configs/apis.yml` | JVM property for a custom `apis.yml` path |
 
 :::note
-Якщо застарілий плагін падає з помилкою через те, що не знаходить у корені `server.properties`, `bukkit.yml` або `ops.json`, Apis виведе в консоль коротку підказку про створення символічного посилання на `configs/` або `users/`.
+If a legacy plugin crashes because it expects `server.properties`, `bukkit.yml`, or `ops.json` in root, Apis catches it and prints a short symlink hint pointing to `configs/` or `users/`.
 :::

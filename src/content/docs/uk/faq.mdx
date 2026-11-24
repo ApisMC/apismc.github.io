@@ -5,6 +5,8 @@ sidebar:
   hidden: true
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 ## Чи підтримується Paper та Bukkit API?
 
 **Так, усі плагіни під Paper, Spigot і Bukkit працюють у звичному режимі.**
@@ -24,7 +26,7 @@ sidebar:
 - **`addons/`** (`--addons-dir`) - сюди потрібно класти `.jar`-файли плагінів. Тека автооновлень також перенесена сюди та має шлях `addons/update/`.
 - **`plugins/`** (`-P` / `--plugins`) - тут зберігаються лише теки з конфігураціями та базами даних плагінів (`plugins/<PluginName>/`). **JAR-файли, залишені в `plugins/`, ядро не завантажує.**
 
-Детальніше про всі директорії та CLI-прапорці читайте в розділі [Структура каталогів](../getting-started/directory-structure/).
+Детальніше про всі директорії та CLI-прапорці читайте в розділі [Структура каталогів](/uk/getting-started/directory-structure/).
 
 ## Чи потрібен плагін на кшталт Multiverse-Core для керування світами?
 
@@ -54,6 +56,8 @@ dimensions:
 
 А якщо потрібно повернути конфігурації та світи в корінь сервера, передайте відповідні CLI-прапорці:
 
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
 ```bash
 java --enable-native-access=ALL-UNNAMED -jar apis.jar \
   --configs-dir . \
@@ -65,6 +69,21 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
   --paper paper.yml \
   --nogui
 ```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+java --enable-native-access=ALL-UNNAMED -jar apis.jar `
+  --configs-dir . `
+  --worlds-dir . `
+  -c server.properties `
+  -b bukkit.yml `
+  -C commands.yml `
+  -S spigot.yml `
+  --paper paper.yml `
+  --nogui
+```
+  </TabItem>
+</Tabs>
 
 :::caution
 Навіть якщо перенести конфігурації та світи в корінь, JAR-файли плагінів однаково завантажуватимуться з папки `--addons-dir` (за замовчуванням `addons/`).
@@ -77,7 +96,7 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
 1. **Пропуск на етапі завантаження (Pre-Disk Pruning):** стартові та реєстрові вимикачі (`startup.datafixers`, `gameplay.recipes`, `gameplay.advancements`, `gameplay.loot-tables`, `chunks.structures`, `chunks.biome-decoration`, `startup.test-registries`) спрацьовують **до** читання файлів із диска. Зокрема, `ResourceManagerRegistryLoadTask` і `TagLoader` взагалі пропускають `listMatchingResources` та JSON-парсинг, а `DataFixers` не будує сотні схем міграції.
 2. **Гарячі цикли тіку (O(1) бітова маска `FeatureRegistry`):** усі 77 булевих прапорців з `configs/apis.yml` під час старту пакуються у два примітивні `volatile long` слова (`disabledMask0` і `disabledMask1`). Перевірка під час тіку - це одна побітова операція `(disabledMask0 & feature.bit) != 0L`, без `HashMap`, `synchronized` або звернень до YAML.
 
-Детальніше про механізм дивіться в розділі [Вимкнення систем (Kill-Switches)](../configuration/kill-switches/).
+Детальніше про механізм дивіться в розділі [Вимкнення систем (Kill-Switches)](/uk/configuration/kill-switches/).
 
 ## Чи не впадуть плагіни з `NullPointerException`, якщо вимкнути рецепти, лут, DFU або AI?
 
@@ -85,7 +104,7 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
 
 - **AI мобів (`entities.ai.enabled: false`):** у `Mob` та `LivingEntity` об'єкти `goalSelector`, `targetSelector`, `navigation`, `sensing` і `brain` залишаються проініціалізованими порожніми та безпечними структурами - пропускається лише реєстрація цілей і виконання тіків.
 - **Обрізані реєстри (`recipes`, `advancements`, `loot-tables`, `structures`):** `RecipeManager` ініціалізується через `RecipeMap.EMPTY` і `List.of()`, `ServerAdvancementManager` - через `ImmutableMap.of()` і `new AdvancementTree()`, а `MappedRegistry.get(TagKey)` повертає кешований порожній `HolderSet.Named`. Висячі `Holder.Reference` під час заморозки прив'язуються до безпечних заглушок (`LootTable.EMPTY`, `AllOfCondition`, `SequenceFunction`, `EmptySlotSource`). Якщо `gameplay.advancements: true`, а `chunks.structures` чи `gameplay.recipes` вимкнено, залежні досягнення та їхні нащадки за `parent` м'яко пропускаються з одним стартовим `WARN`.
-- **DFU (`startup.datafixers: false`):** `DATA_FIXER` і `FILE_FIXER` не дорівнюють `null`, оскільки створюється мінімальна схема `0` із `ConcurrentHashMap<>` і no-op правилом. Якщо `level.dat` має старіший `DataVersion` (< `5023` для 26.3), ядро виводить один стартовий `WARN`.
+- **DFU (`startup.datafixers: false`):** `DATA_FIXER` і `FILE_FIXER` не дорівнюють `null`, оскільки створюється мінімальна схема `0` із `ConcurrentHashMap<>` і no-op правилом. Якщо `level.dat` має старіший `DataVersion`, ядро виводить один стартовий `WARN`.
 - **Ліниві кеші блоків (`caches.eager-blockstate-cache: false`):** якщо плагін або ядро вперше звернеться до властивості блоку під час роботи сервера, 15 публічних і Moonrise-геттерів у `BlockBehaviour.BlockStateBase` потокобезпечно прогріють кеш на вимогу (`ensureCacheInitialized()`) із захистом від реентерабельності.
 - **Заблоковані виклики (`createWorld`, `findNearestMapStructure`, `getWorld`):** повертають штатне `@Nullable`-значення та виводять у консоль попередження (`ApisDiagnostics.warnBlocked`), у якому одразу вказано ключ `configs/apis.yml`, що заблокував дію.
 
@@ -98,7 +117,7 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
 - із `spigot.yml`: advancements.disable-saving, advancements.disabled, players.disable-saving;
 - із `paper-global.yml` та `paper-world*.yml`: misc.enable-nether, collisions.enable-player-collisions, environment.disable-thunder, environment.disable-ice-and-snow, unsupported-settings.ticking.chunks.
 
-Після команди `/apis reload` метод `ApisConfigSync.syncAll(server)` оновлює всі завантажені світи без перезапуску. Повну таблицю синхронізації наведено в [довіднику configs/apis.yml](../configuration/apis-config/#механізм-apisconfigsync).
+Після команди `/apis reload` метод `ApisConfigSync.syncAll(server)` оновлює всі завантажені світи без перезапуску. Повну таблицю синхронізації наведено в [довіднику configs/apis.yml](/uk/configuration/apis-config/#механізм-apisconfigsync).
 
 ## Чи не ламають `PluginPackageIndex` і `Commodore` плагіни з ByteBuddy або ASM?
 
@@ -133,9 +152,9 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
 - без парсингу ~1100 таблиць луту, рецептів, досягнень і структур;
 - без прогріву ~27k+ `BlockState` і 16 МБ таблиці `CraftMapColorCache` на старті;
 - без мережевих затримок Mojang Services Discovery та перевірки версій;
-- із кешем `cache/.paperclip-stamp`, дисковим кешем `cache/natives/`, `OSNuma.NoOp` поза Linux і готовим `Class-Path` для [Java 25 AOT Cache](../internals/aot/).
+- із кешем `cache/.paperclip-stamp`, дисковим кешем `cache/natives/`, `OSNuma.NoOp` поза Linux і готовим `Class-Path` для [Java 25+ AOT Cache](/uk/internals/aot/).
 
-Водночас кінцевий час старту в продакшні значною мірою залежить від самих плагінів у `addons/`. Детальніше дивіться у статті [Вплив плагінів та реальні бенчмарки](../practice/plugins-impact/).
+Водночас кінцевий час старту в продакшні значною мірою залежить від самих плагінів у `addons/`. Детальніше дивіться у статті [Вплив плагінів та реальні бенчмарки](/uk/practice/plugins-impact/).
 
 ## Як зрозуміти, що сторонній плагін зламався через нову папку або вимкнену функцію?
 
@@ -149,7 +168,7 @@ java --enable-native-access=ALL-UNNAMED -jar apis.jar \
 1. **Зупиніть сервер** командою `stop` і замініть `apis-*.jar` у корені на нову версію.
 2. **Ручне очищення кешу не потрібне:** при першому запуску нового JAR лаунчер Paperclip звірить хеш маніфестів (`versions.list`, `libraries.list`, `patches.list`, `download-context`) із `cache/.paperclip-stamp`, побачить зміни й автоматично оновить розпакований JAR у `versions/`, бібліотеки в `libraries/` та штамп кешу.
 3. **Налаштування зберігаються:** `configs/apis.yml` не перезаписується «з нуля» - ваші значення залишаються, а нові ключі автоматично додаються зі значеннями за замовчуванням.
-4. **Якщо ви використовуєте Java 25 AOT (`cache/apis-cp.aot`):** після заміни JAR обов'язково перезберіть AOT-профіль (`-XX:AOTMode=record`) і кеш (`-XX:AOTMode=create`), інакше JVM проігнорує старий файл або виведе попередження про невідповідність класів.
+4. **Якщо ви використовуєте Java 25+ AOT (`cache/apis-cp.aot`):** після заміни JAR обов'язково перезберіть AOT-профіль (`-XX:AOTMode=record`) і кеш (`-XX:AOTMode=create`), інакше JVM проігнорує старий файл або виведе попередження про невідповідність класів.
 
 ## Як підключити сервер до BungeeCord / Velocity? Чи працює Forwarding?
 

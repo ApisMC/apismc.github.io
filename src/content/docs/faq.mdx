@@ -1,0 +1,194 @@
+---
+title: FAQ
+description: Answers to common and technical questions about Paper compatibility, Kill-Switches internals, classloader safety, worlds, and fast startup.
+sidebar:
+  hidden: true
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Are Paper and Bukkit API plugins supported?
+
+**Yes. Plugins targeting Paper, Spigot, and Bukkit run as expected.**
+
+- No public Bukkit, Spigot, or Paper API methods were removed or had their signatures changed.
+- `apis-api` only adds the `ServerBuildInfo.BRAND_APIS_ID` constant (`apismc:apis`), two `default` methods for package indexing, and the internal `PluginPackageIndex`.
+- `ServerBuildInfo#isBrandCompatible(Key)` returns `true` for both `apismc:apis` and `papermc:paper`, so plugins checking the Paper brand pass cleanly.
+
+:::note
+If you run legacy plugins (older than Minecraft `1.20.5`), leave `compatibility.legacy.plugin-bytecode-rerouting: true` in `configs/apis.yml`. Modern setups can set it to `false` for faster startup.
+:::
+
+## Why are JAR files missing from `plugins/`?
+
+Apis splits plugin code from plugin config and data directories:
+
+- **`addons/`** (`--addons-dir`) - drop plugin `.jar` files here. The auto-update directory is also here at `addons/update/`.
+- **`plugins/`** (`-P` / `--plugins`) - holds only plugin configs and data folders (`plugins/<PluginName>/`). **JAR files left inside `plugins/` are not loaded.**
+
+Check [Directory Structure](/getting-started/directory-structure/) for all directory overrides and CLI flags.
+
+## Do I need Multiverse-Core or similar world plugins?
+
+No. With `dimensions.mode: standalone` (the default), the server handles multi-world management out of the box:
+
+:::caution[New Chunk Generation in Standalone Mode]
+In `standalone` mode, the chunk generator for all worlds is forced to **Void**.
+
+* **Existing saved chunks stay intact:** builds and terrain in copied `region/*.mca` files load normally.
+* **Any new (ungenerated) chunks generate as empty void.**
+* If you want vanilla terrain and biome generation for new chunks, switch `dimensions.mode: vanilla` in `configs/apis.yml`.
+:::
+
+1. **No extra plugins:** load, unload, reload, and teleport with `/world` and `/tpworld` instead of Multiverse-Core.
+2. **Paper migration:** move existing world folders from the server root into `worlds/` (e.g., `worlds/hub/`, `worlds/arena_1/`).
+3. **Auto-discovery:** on startup, Apis scans `worlds/` and loads every valid world with the lightweight Void generator.
+4. **Per-world config (`world.yml`):** each world gets a `worlds/<world_name>/world.yml`. Spawn coordinates are not read from `level.dat`; spawn point, `force-spawn`, and game mode come from `world.yml` (editable by hand or via `/setworldspawn`).
+
+## How do I restore standard Paper paths and behavior?
+
+Set the world mode to `vanilla` in `configs/apis.yml`:
+
+```yaml
+dimensions:
+  mode: vanilla
+```
+
+To place configs and worlds back in the server root, pass the standard CLI flags:
+
+<Tabs syncKey="os">
+  <TabItem label="Linux / macOS">
+```bash
+java --enable-native-access=ALL-UNNAMED -jar apis.jar \
+  --configs-dir . \
+  --worlds-dir . \
+  -c server.properties \
+  -b bukkit.yml \
+  -C commands.yml \
+  -S spigot.yml \
+  --paper paper.yml \
+  --nogui
+```
+  </TabItem>
+  <TabItem label="Windows">
+```powershell
+java --enable-native-access=ALL-UNNAMED -jar apis.jar `
+  --configs-dir . `
+  --worlds-dir . `
+  -c server.properties `
+  -b bukkit.yml `
+  -C commands.yml `
+  -S spigot.yml `
+  --paper paper.yml `
+  --nogui
+```
+  </TabItem>
+</Tabs>
+
+:::caution
+Even if you move configs and worlds back to the root directory, plugin JARs still load from `--addons-dir` (`addons/` by default).
+:::
+
+## How are feature kill-switches implemented?
+
+Kill-switches work on **two levels** with no reflection, locks, or runtime YAML overhead:
+
+1. **Pre-Disk Pruning:** boot and registry toggles (`startup.datafixers`, `gameplay.recipes`, `gameplay.advancements`, `gameplay.loot-tables`, `chunks.structures`, `chunks.biome-decoration`, `startup.test-registries`) kick in **before** touching the filesystem. `ResourceManagerRegistryLoadTask` and `TagLoader` skip `listMatchingResources` and JSON parsing completely, and `DataFixers` skips building migration schemas.
+2. **Hot Tick Loops (O(1) `FeatureRegistry` bitmask):** at boot, all 77 boolean keys from `configs/apis.yml` pack into two primitive `volatile long` fields (`disabledMask0` and `disabledMask1`). Every tick check is a single bitwise op `(disabledMask0 & feature.bit) != 0L` with no `HashMap`, `synchronized`, or YAML lookups.
+
+See [Kill-Switches](/configuration/kill-switches/) for full details.
+
+## Will plugins throw `NullPointerException` if recipes, loot, DFU, or AI are disabled?
+
+**No.** Apis uses **non-null fallback objects** instead of setting fields to `null`:
+
+- **Mob AI (`entities.ai.enabled: false`):** `Mob` and `LivingEntity` still allocate empty, valid `goalSelector`, `targetSelector`, `navigation`, `sensing`, and `brain` instances. Only goal registration and ticking are skipped.
+- **Pruned registries (`recipes`, `advancements`, `loot-tables`, `structures`):** `RecipeManager` uses `RecipeMap.EMPTY` and `List.of()`, `ServerAdvancementManager` uses `ImmutableMap.of()` and `new AdvancementTree()`, and `MappedRegistry.get(TagKey)` returns a cached empty `HolderSet.Named`. Dangling `Holder.Reference` entries bind during freeze to safe stubs (`LootTable.EMPTY`, `AllOfCondition`, `SequenceFunction`, `EmptySlotSource`). If `gameplay.advancements: true` while `chunks.structures` or `gameplay.recipes` is disabled, dependent advancements and their `parent` trees are softly skipped with one startup `WARN`.
+- **DFU (`startup.datafixers: false`):** `DATA_FIXER` and `FILE_FIXER` remain non-null using a minimal schema `0` (`ConcurrentHashMap<>` + no-op fixer). If `level.dat` has an older `DataVersion`, one startup `WARN` is printed.
+- **Lazy block caches (`caches.eager-blockstate-cache: false`):** when a plugin or server call first touches a block state property, all 15 public and Moonrise getters in `BlockBehaviour.BlockStateBase` initialize caches thread-safely on demand (`ensureCacheInitialized()`) with reentrancy protection.
+- **Blocked API calls (`createWorld`, `findNearestMapStructure`, `getWorld`):** return normal `@Nullable` values and log `ApisDiagnostics.warnBlocked` pointing straight to the blocking key in `configs/apis.yml`.
+
+## Do `configs/apis.yml` and `paper-*.yml`, `spigot.yml`, `bukkit.yml` conflict?
+
+**No, `ApisConfigSync` prevents conflicts.**  
+When a setting is managed in `configs/apis.yml`, Apis overrides the mirrored fields in memory (`GlobalConfiguration`, `WorldConfiguration`, `SpigotConfig`, `CraftServer`) and **strips duplicate keys** before writing legacy files to disk:
+- `server.properties`: `allow-nether`, `spawn-monsters`, `spawn-animals`, `spawn-npcs`
+- `bukkit.yml`: `settings.allow-end`
+- `spigot.yml`: `advancements.disable-saving`, `advancements.disabled`, `players.disable-saving`
+- `paper-global.yml` & `paper-world*.yml`: `misc.enable-nether`, `collisions.enable-player-collisions`, `environment.disable-thunder`, `environment.disable-ice-and-snow`, `unsupported-settings.ticking.chunks`
+
+Running `/apis reload` triggers `ApisConfigSync.syncAll(server)` across all loaded worlds with no restart. See the full table in [How ApisConfigSync Works](/configuration/apis-config/#how-apisconfigsync-works).
+
+## Do `PluginPackageIndex` and `Commodore` break ByteBuddy or ASM plugins?
+
+**No. Dynamically generated classes have a built-in fallback:**
+
+- **`PluginPackageIndex`:** indexes packages from each plugin JAR and its libraries at startup so `SimpleListPluginClassLoaderGroup` skips unrelated loaders in O(1). If a lookup fails and at least one loader was skipped (`anySkipped`), Apis falls back to checking the skipped loaders and caches the dynamic package (`recordDynamicPackage`). Plugins using ByteBuddy, ASM, or `defineClass` keep working.
+- **`Commodore.mayNeedConversion`:** keeps legacy plugin rewriting intact while pre-scanning the `.class` header (`0xCAFEBABE`) and `CONSTANT_Utf8` pool entries without allocations. ASM `ClassReader`/`ClassWriter` is skipped only when none of `org/bukkit/`, `org/spigotmc/`, `com/destroystokyo/`, `io/papermc/`, `com.mysql.jdbc.Driver`, or legacy `Enum` renames appear.
+
+## Could stale `session.lock` cleanup break another running server?
+
+**No.** `DirectoryLock` writes the process PID, start timestamp, and host ID (`CURRENT_HOST_ID`, incorporating `/proc/sys/kernel/random/boot_id` on Linux) into `session.lock`.
+
+`tryBreakStaleSessionLock` removes `session.lock` **only when** both checks pass:
+1. The host ID matches the current machine (or is absent).
+2. The recorded `pid` (`!= currentPid`) is dead (`ProcessHandle.of(pid).filter(ProcessHandle::isAlive).isEmpty()`).
+
+If a world is locked by a live sibling process on the same box or by another host on a shared mount, Apis **leaves the lock alone** and stops safely with an error.
+
+## What startup speed and performance gains show up in benchmarks?
+
+**Apis boots the core engine in under a second (`~0.85s`). With 9 heavy plugins, it starts ~2x faster and uses nearly half the idle RAM compared to Paper.**
+
+Benchmark env (Docker `linux/arm64`, 4 vCPU, 4 GiB RAM, Java 25, AOT cache, direct `26.3` protocol with 9 plugins: `ViaVersion`, `LuckPerms`, `KaMenu`, `FancyNpcs`, `Skript`, `emotecraft`, `TAB`, `WorldEdit`, `GrimAC`):
+- **Cold start (`Done`):** **5.91s** best on Apis (**6.28s** 3-run avg; `5.52s` in the profiling pass where core init took **0.85s** and plugins accounted for the rest in `onLoad`/`onEnable`), vs **12.27s** on Paper.
+- **Idle RAM:** **1021.3 MiB** best on Apis (**1140.9 MiB** avg) vs **1886.7 MiB** on Paper.
+- **100 bots (90s plateau, 0 kicks/errors):** **10.19 ms** avg MSPT (**186.4%** CPU, max GC pause `92.7 - 140.3 ms`) vs **27.53 ms** on Paper (**380.4%** CPU, max GC pause `516.8 - 573.7 ms`).
+- **Stress cap (`60 - 70 ms` MSPT):** Paper exceeded the limit at **150 bots** (`111.75 ms`, `12.52 TPS`) and crashed at **200**, while Apis held **8.59 ms** (`20.00 TPS`) at 200 bots, **32.59 ms** (`19.9 TPS`) at 300 bots, and pushed to **350 bots** (`64.32 ms`, `15.4 TPS`) with zero kicks or errors.
+- **250-bot repeatability (3 runs, `4/s`):** all 3 runs held **250/250** bots (`0` errors, `20.0 TPS` settled), hitting `14.80 ms` best settled MSPT (`16.70 ms` avg, `253.86%` CPU). At **12 bots/s** burst join, **250/250** stayed online cleanly (`20.50 ms` settled).
+
+Startup gains come from skipping unused boot work and caches:
+- no DFU schema build or background DFU threads
+- no parsing ~1100 loot tables, recipes, advancements, or structures
+- no boot-time warmup for ~27k+ `BlockState` entries or the 16 MB `CraftMapColorCache`
+- no Mojang Services Discovery or Paper version-check network calls
+- `cache/.paperclip-stamp`, disk-cached `cache/natives/`, `OSNuma.NoOp` off Linux, and an AOT-friendly `Class-Path` for [Java 25+ AOT Cache](/internals/aot/)
+
+Production boot times still depend heavily on plugins in `addons/`. See [Plugin Impact & Real Benchmarks](/practice/plugins-impact/) for the breakdown.
+
+## How do I tell if a plugin broke due to moved folders or a kill-switch?
+
+Console logs pinpoint it directly:
+1. If an older plugin looks for a moved root file (`server.properties`, `bukkit.yml`, `ops.json`, `whitelist.json`, etc.), `ApisDiagnostics` catches the stacktrace and prints a short two-line `ERROR` naming the exact symlink to create.
+2. If a plugin hits a disabled API (such as creating a world with `dimensions.custom-worlds: false`), you get `Blocked plugin '<name>' ... - disabled by <key> in apis.yml`.
+3. Run `/apis status` any time to list active restrictions.
+
+## How do I update the Apis JAR cleanly?
+
+1. **Stop the server** with `stop` and swap the root `apis-*.jar` for the new release.
+2. **No manual cache wiping needed:** on first launch of the new JAR, the Paperclip launcher checks manifest hashes (`versions.list`, `libraries.list`, `patches.list`, `download-context`) against `cache/.paperclip-stamp` and refreshes `versions/`, `libraries/`, and the stamp automatically.
+3. **Settings stay intact:** `configs/apis.yml` is not overwritten from scratch; existing choices stay put and new options are appended with defaults.
+4. **If using Java 25+ AOT (`cache/apis-cp.aot`):** rebuild both the AOT config (`-XX:AOTMode=record`) and cache (`-XX:AOTMode=create`) after swapping JARs, or the JVM will reject the stale cache or warn about class mismatches.
+
+## Does BungeeCord / Velocity forwarding still work?
+
+**Yes. BungeeCord and Velocity (including Modern Forwarding) work cleanly.**
+
+Since configs live under `configs/`, edit them there:
+- **`configs/server.properties`:** set `online-mode=false`.
+- **Velocity (Modern Forwarding):** in `configs/paper-global.yml`, set `proxies.velocity.enabled: true`, `online-mode: true`, and your `secret` matching `velocity.toml`.
+- **BungeeCord / Waterfall:** enable `settings.bungeecord: true` in `configs/spigot.yml`. `ApisConfigSync` leaves proxy sections untouched, so forwarding config is never overwritten.
+- **Tip for `configs/apis.yml`:** behind a proxy, you can set `network.generate-keypair: false` to skip RSA key generation and native `Natives.cipher` loading at boot (keys still generate lazily if anything asks for them).
+
+## Can I edit `apis.yml` live without restarting?
+
+**Yes. `/apis reload` updates most runtime options on the fly** (requires `apis.admin`, default OP).
+
+Running `/apis reload` does three things without rebooting:
+1. `ApisConfig.reload()` re-reads `configs/apis.yml` and updates `FeatureRegistry` bitmasks immediately.
+2. `FeatureRegistry.resolveRegistries(...)` refreshes `entities.ai.type-filter` and dimension ticking lists (`dimensions.always-ticking`, `dimensions.never-ticking`).
+3. `ApisConfigSync.syncAll(server)` syncs mirrored flags in `SpigotConfig`, `GlobalConfiguration`, and every loaded `ServerLevel#paperConfig()`.
+
+**Applied immediately:** ticking toggles, mob AI, collisions, natural spawning, physics, world environment, player mechanics (`locator-bar`, `floating-kick`, `statistics`, etc.), `packet-range-clamping`, `storage.periodic-autosave`, `storage.world-saving`, and `messages.commands`.
+
+**Requires a full restart:** cold boot, registry pruning, startup caches, and world mode/init flags (`startup.*`, `caches.*`, `gameplay.recipes`, `gameplay.advancements`, `gameplay.loot-tables`, `chunks.structures`, `chunks.biome-decoration`, `dimensions.mode`, `dimensions.fallback-world`, `dimensions.enabled`, `network.analytics.bstats`, `network.analytics.spark`).

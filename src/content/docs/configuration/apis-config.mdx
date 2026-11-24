@@ -1,193 +1,193 @@
 ---
-title: Довідник configs/apis.yml
-description: Повний довідник параметрів configs/apis.yml, значень за замовчуванням, валідації та механізму синхронізації ApisConfigSync.
+title: configs/apis.yml Reference
+description: Complete reference for configs/apis.yml options, defaults, validation rules, and ApisConfigSync behavior.
 sidebar:
   order: 1
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-Файл `configs/apis.yml` - це головний конфіг ядра Apis. У ньому зібрані вимикачі ігрових систем, режими світів, мережеві обмеження та шаблони повідомлень команд. Застарілі дублікати в `server.properties`, `bukkit.yml`, `spigot.yml` і `paper-*.yml` синхронізуються й автоматично прибираються, щоб усі налаштування керувалися з одного місця.
+`configs/apis.yml` is the main config file for Apis. It centralizes gameplay kill-switches, world modes, packet range limits, and command message templates. Overlapping keys in `server.properties`, `bukkit.yml`, `spigot.yml`, and `paper-*.yml` are synced in memory and stripped on disk so settings live in one place.
 
 <CardGrid>
-  <Card title="Раннє завантаження" icon="rocket">
-    Файл `configs/apis.yml` зчитується на самому старті ще до ініціалізації світів і реєстрів, дозволяючи намертво вимкнути DataFixers, рецепти чи прогрів кешів блоків.
+  <Card title="Early Loading" icon="rocket">
+    `configs/apis.yml` loads right at startup before worlds or registries initialize, so DataFixers, recipes, and block cache warmups can be disabled up front.
   </Card>
-  <Card title="Шлях до конфігурації" icon="document">
-    За замовчуванням конфіг зберігається у `configs/apis.yml`, а для кастомного розташування доступний прапорець запуску `-Dapis.config=<шлях>`.
+  <Card title="Config Path" icon="document">
+    Stored at `configs/apis.yml` by default. Pass `-Dapis.config=<path>` on startup to point to another file.
   </Card>
-  <Card title="Захист від пошкодження" icon="approve-check-circle">
-    При синтаксичній помилці в YAML ядро не падає: файл зберігається як `configs/apis.yml.broken`, а поруч генерується новий чистий конфіг із дефолтними значеннями.
+  <Card title="Broken YAML Guard" icon="approve-check-circle">
+    If your YAML has a syntax error, the server will not crash. It moves the broken file to `configs/apis.yml.broken` and writes a clean default config.
   </Card>
-  <Card title="Логіка перемикання" icon="setting">
-    Просте правило `true` / `false`: значення `true` зберігає ванільну поведінку Paper, а `false` повністю зупиняє підсистему заради економії ресурсів CPU та RAM.
+  <Card title="Simple Booleans" icon="setting">
+    Straight `true` / `false` logic: `true` keeps vanilla Paper behavior, while `false` turns the subsystem off to save CPU and RAM.
   </Card>
 </CardGrid>
 
 ---
 
-## Повний довідник параметрів `configs/apis.yml`
+## Full `configs/apis.yml` Reference
 
-Нижче наведено всі параметри 15 функціональних секцій (`Feature`-вимикачі, білі списки та числові межі). Для кожного ключа вказано тип, дефолтне значення та пов'язану константу `org.apismc.apis.feature.Feature` (або правило санітизації в `ApisConfig#sanitize`).
+Below are all options across all 15 functional sections (`Feature` kill-switches, allowlists, and numeric bounds). Each row lists the type, default value, and linked `org.apismc.apis.feature.Feature` constant (or `ApisConfig#sanitize` rule).
 
-### `startup` - Холодний старт і перевірки
+### `startup` - Cold Boot & Validation
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `startup.datafixers` | `boolean` | `true` | `STARTUP_DATAFIXERS` - побудова схем DFU/DataConverter та міграція старих даних; при `false` і старому `DataVersion` (< `5023` для 26.3) виводиться стартовий `WARN` |
-| `startup.search-spawn-point` | `boolean` | `true` | `STARTUP_SEARCH_SPAWN_POINT` - пошук поверхні у 11×11 чанках; `false` ставить `(0, seaLevel, 0)` |
-| `startup.initial-chunk-load` | `boolean` | `true` | `STARTUP_INITIAL_CHUNK_LOAD` - активація `TicketStorage` і очікування стартових чанків до `Done` |
-| `startup.mojang-service-discovery` | `boolean` | `true` | `STARTUP_MOJANG_SERVICE_DISCOVERY` - HTTP/DNS-запит до `discovery.minecraftservices.com` |
-| `startup.paper-version-check` | `boolean` | `true` | `STARTUP_PAPER_VERSION_CHECK` - перевірка оновлень збірки на старті |
-| `startup.validate-creative-tabs` | `boolean` | `true` | `STARTUP_VALIDATE_CREATIVE_TABS` - валідація `CreativeModeTabs` і `LootContextParamSets` у `Bootstrap` |
-| `startup.validate-loot` | `boolean` | `true` | `STARTUP_VALIDATE_LOOT` - валідація таблиць луту в `ReloadableServerRegistries` |
-| `startup.test-registries` | `boolean` | `true` | `STARTUP_TEST_REGISTRIES` - завантаження реєстрів GameTest (`test_environment`, `test_instance`) |
+| `startup.datafixers` | `boolean` | `true` | `STARTUP_DATAFIXERS` - builds DFU/DataConverter schemas and migrates old world data. If `false` and a world has an older `DataVersion`, logs a startup `WARN`. |
+| `startup.search-spawn-point` | `boolean` | `true` | `STARTUP_SEARCH_SPAWN_POINT` - scans an 11x11 chunk area for a surface spawn; `false` forces `(0, seaLevel, 0)`. |
+| `startup.initial-chunk-load` | `boolean` | `true` | `STARTUP_INITIAL_CHUNK_LOAD` - activates `TicketStorage` and waits for spawn chunks before `Done`. |
+| `startup.mojang-service-discovery` | `boolean` | `true` | `STARTUP_MOJANG_SERVICE_DISCOVERY` - HTTP/DNS lookup against `discovery.minecraftservices.com`. |
+| `startup.paper-version-check` | `boolean` | `true` | `STARTUP_PAPER_VERSION_CHECK` - checks for Paper build updates on startup. |
+| `startup.validate-creative-tabs` | `boolean` | `true` | `STARTUP_VALIDATE_CREATIVE_TABS` - validates `CreativeModeTabs` and `LootContextParamSets` in `Bootstrap`. |
+| `startup.validate-loot` | `boolean` | `true` | `STARTUP_VALIDATE_LOOT` - validates loot tables in `ReloadableServerRegistries`. |
+| `startup.test-registries` | `boolean` | `true` | `STARTUP_TEST_REGISTRIES` - loads GameTest registries (`test_environment`, `test_instance`). |
 
-### `caches` - Стратегії прогріву кешів
+### `caches` - Cache Warmup
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `caches.eager-blockstate-cache` | `boolean` | `true` | `CACHES_EAGER_BLOCKSTATE` - прогрів ~27k+ `BlockState` через `parallelStream()` на старті; `false` = лінивий |
-| `caches.eager-craftblockdata-cache` | `boolean` | `true` | `CACHES_EAGER_CRAFTBLOCKDATA` - прогрів `CraftBlockData` при ініціалізації класу |
-| `caches.eager-map-color-cache` | `boolean` | `true` | `CACHES_EAGER_MAP_COLOR` - виділення та розрахунок 16 МБ таблиці `CraftMapColorCache` на старті |
+| `caches.eager-blockstate-cache` | `boolean` | `true` | `CACHES_EAGER_BLOCKSTATE` - pre-warms ~27k+ `BlockState` entries via `parallelStream()` at startup; `false` switches to lazy init. |
+| `caches.eager-craftblockdata-cache` | `boolean` | `true` | `CACHES_EAGER_CRAFTBLOCKDATA` - warms `CraftBlockData` during static class init. |
+| `caches.eager-map-color-cache` | `boolean` | `true` | `CACHES_EAGER_MAP_COLOR` - allocates and computes the 16 MB `CraftMapColorCache` table at boot. |
 
-### `dimensions` - Архітектура світів і вимірів
+### `dimensions` - World & Dimension Modes
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `dimensions.mode` | `String` | `"standalone"` | Допустимо `"standalone"` або `"vanilla"`; будь-яке інше значення нормалізується до `"standalone"` |
-| `dimensions.fallback-world` | `String` | `"hub"` | Базовий світ у `worlds/`; заборонені `/`, `\`, `..`, порожній рядок (відкат до `"hub"`) |
-| `dimensions.enabled` | `List<String>` | `["minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"]` | Позитивний білий список вимірів (`"*"` = усі); `minecraft:overworld` завжди захищено і примусово додається |
-| `dimensions.always-ticking` | `List<String>` | `["minecraft:overworld"]` | Виміри, що тікають постійно навіть без гравців (`"*"` = усі); решта тікають лише при наявності гравців |
-| `dimensions.never-ticking` | `List<String>` | `[]` | Виміри з повним блокуванням тіків навіть за наявності гравців (`"*"` = усі; має пріоритет над `always-ticking`) |
-| `dimensions.custom-worlds` | `boolean` | `true` | `DIMENSIONS_CUSTOM_WORLDS` - дозвіл на створення/завантаження світів через `CraftServer.createWorld` |
-| `dimensions.portals` | `boolean` | `true` | `DIMENSIONS_PORTALS` - переходи крізь портали Незера й Енда |
+| `dimensions.mode` | `String` | `"standalone"` | Accepts `"standalone"` or `"vanilla"`; anything else normalizes to `"standalone"`. |
+| `dimensions.fallback-world` | `String` | `"hub"` | Base world directory inside `worlds/`; rejects `/`, `\`, `..`, and empty strings (falls back to `"hub"`). |
+| `dimensions.enabled` | `List<String>` | `["minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"]` | Dimension allowlist (`"*"` = all). `minecraft:overworld` is always protected and force-included. |
+| `dimensions.always-ticking` | `List<String>` | `["minecraft:overworld"]` | Dimensions that tick even with zero players (`"*"` = all); all others tick only when occupied. |
+| `dimensions.never-ticking` | `List<String>` | `[]` | Dimensions blocked from ticking even with players online (`"*"` = all; overrides `always-ticking`). |
+| `dimensions.custom-worlds` | `boolean` | `true` | `DIMENSIONS_CUSTOM_WORLDS` - allows creating/loading worlds via `CraftServer.createWorld`. |
+| `dimensions.portals` | `boolean` | `true` | `DIMENSIONS_PORTALS` - Nether and End portal transitions. |
 
-### `chunks` - Генерація та тікінг чанків
+### `chunks` - Generation & Ticking
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `chunks.structures` | `boolean` | `true` | `CHUNKS_STRUCTURES` - завантаження реєстрів структур, генерація та `/locate structure` |
-| `chunks.biome-decoration` | `boolean` | `true` | `CHUNKS_BIOME_DECORATION` - генерація декорацій і карверів; при `false` вирізає `CARVER` (а `FEATURE`/`PLACED_FEATURE` - лише коли вимкнено й `chunks.structures`) та полегшує `Biome.NETWORK_CODEC` |
-| `chunks.ticking.enabled` | `boolean` | `true` | `CHUNKS_TICKING` - **[Головний вимикач]** цикл `tickChunks` у `ServerChunkCache` (при `false` підпараметри ігноруються) |
-| `chunks.ticking.sub-features.random-ticks` | `boolean` | `true` | `CHUNKS_RANDOM_TICKS` - випадкові тіки блоків (ріст рослин, трава, танення льоду) |
-| `chunks.ticking.sub-features.block-ticks` | `boolean` | `true` | `CHUNKS_BLOCK_TICKS` - черга запланованих тіків блоків (`blockTicks.tick`) |
-| `chunks.ticking.sub-features.fluid-ticks` | `boolean` | `true` | `CHUNKS_FLUID_TICKS` - черга тіків води та лави (`fluidTicks.tick`) |
-| `chunks.ticking.sub-features.poi-ticking` | `boolean` | `true` | `CHUNKS_POI_TICKING` - тіки просторового індексу POI у `ChunkMap` (`PoiManager#tick`) |
+| `chunks.structures` | `boolean` | `true` | `CHUNKS_STRUCTURES` - loads structure registries, generates structures, and powers `/locate structure`. |
+| `chunks.biome-decoration` | `boolean` | `true` | `CHUNKS_BIOME_DECORATION` - chunk decoration and carvers. Setting `false` prunes `CARVER` (and `FEATURE`/`PLACED_FEATURE` if `chunks.structures` is also `false`) and slims `Biome.NETWORK_CODEC`. |
+| `chunks.ticking.enabled` | `boolean` | `true` | `CHUNKS_TICKING` - **[Master switch]** `tickChunks` loop in `ServerChunkCache` (sub-options are skipped when `false`). |
+| `chunks.ticking.sub-features.random-ticks` | `boolean` | `true` | `CHUNKS_RANDOM_TICKS` - random block ticks (crop growth, grass spread, ice melt). |
+| `chunks.ticking.sub-features.block-ticks` | `boolean` | `true` | `CHUNKS_BLOCK_TICKS` - scheduled block tick queue (`blockTicks.tick`). |
+| `chunks.ticking.sub-features.fluid-ticks` | `boolean` | `true` | `CHUNKS_FLUID_TICKS` - water and lava tick queue (`fluidTicks.tick`). |
+| `chunks.ticking.sub-features.poi-ticking` | `boolean` | `true` | `CHUNKS_POI_TICKING` - POI spatial index ticking in `ChunkMap` (`PoiManager#tick`). |
 
-### `block-entities` - Тайл-ентіті
+### `block-entities` - Tile Entities
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `block-entities.ticking.enabled` | `boolean` | `true` | `BLOCK_ENTITIES_TICKING` - **[Головний вимикач]** тіки всіх тайл-ентіті в `Level#tickBlockEntities` |
-| `block-entities.ticking.sub-features.hoppers` | `boolean` | `true` | `BLOCK_ENTITIES_HOPPERS` - перенесення предметів у `HopperBlockEntity#pushItemsTick` |
+| `block-entities.ticking.enabled` | `boolean` | `true` | `BLOCK_ENTITIES_TICKING` - **[Master switch]** ticks all block entities in `Level#tickBlockEntities`. |
+| `block-entities.ticking.sub-features.hoppers` | `boolean` | `true` | `BLOCK_ENTITIES_HOPPERS` - item transfers in `HopperBlockEntity#pushItemsTick`. |
 
-### `blocks-and-physics` - Фізика блоків і предметів
+### `blocks-and-physics` - Block & Item Physics
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `blocks-and-physics.redstone` | `boolean` | `true` | `PHYSICS_REDSTONE` - поширення сигналу в `RedstoneWireBlock` |
-| `blocks-and-physics.block-gravity` | `boolean` | `true` | `PHYSICS_BLOCK_GRAVITY` - падіння піску, гравію, ковадел у `FallingBlock#tick` |
-| `blocks-and-physics.leaf-decay` | `boolean` | `true` | `PHYSICS_LEAF_DECAY` - природне осипання листя у `LeavesBlock#randomTick` |
-| `blocks-and-physics.fire-spread` | `boolean` | `true` | `PHYSICS_FIRE_SPREAD` - горіння і поширення вогню у `FireBlock#tick` |
-| `blocks-and-physics.item-physics` | `boolean` | `true` | `PHYSICS_ITEM_PHYSICS` - рух і гравітація викинутих `ItemEntity` (таймери підбору/деспавну зберігаються) |
-| `blocks-and-physics.block-events` | `boolean` | `true` | `PHYSICS_BLOCK_EVENTS` - черга й виконання подій блоків (`runBlockEvents`: поршні, нотні блоки, анімація скринь) |
+| `blocks-and-physics.redstone` | `boolean` | `true` | `PHYSICS_REDSTONE` - signal propagation in `RedstoneWireBlock`. |
+| `blocks-and-physics.block-gravity` | `boolean` | `true` | `PHYSICS_BLOCK_GRAVITY` - sand, gravel, and anvil falling in `FallingBlock#tick`. |
+| `blocks-and-physics.leaf-decay` | `boolean` | `true` | `PHYSICS_LEAF_DECAY` - natural leaf decay in `LeavesBlock#randomTick`. |
+| `blocks-and-physics.fire-spread` | `boolean` | `true` | `PHYSICS_FIRE_SPREAD` - fire burning and spread in `FireBlock#tick`. |
+| `blocks-and-physics.item-physics` | `boolean` | `true` | `PHYSICS_ITEM_PHYSICS` - gravity and motion for dropped `ItemEntity` (pickup/despawn timers still run). |
+| `blocks-and-physics.block-events` | `boolean` | `true` | `PHYSICS_BLOCK_EVENTS` - block event queue (`runBlockEvents`: pistons, note blocks, chest animations). |
 
-### `world-environment` - Оточення світу
+### `world-environment` - World Environment
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `world-environment.daylight-cycle` | `boolean` | `true` | `ENV_DAYLIGHT_CYCLE` - зміна часу, яскравості неба та розсилка пакетів часу |
-| `world-environment.weather` | `boolean` | `true` | `ENV_WEATHER` - дощ, гроза, блискавки та утворення снігу/льоду |
-| `world-environment.raids` | `boolean` | `true` | `ENV_RAIDS` - створення та тікінг рейдів на села |
-| `world-environment.sleep-cycle` | `boolean` | `true` | `ENV_SLEEP_CYCLE` - перевірка пропуску ночі через сон у ліжках |
-| `world-environment.end-dragon-fight` | `boolean` | `true` | `ENV_END_DRAGON_FIGHT` - логіка `EndDragonFight` в Енді |
-| `world-environment.world-border-tick` | `boolean` | `true` | `ENV_WORLD_BORDER_TICK` - тікінг кордону світу у `ServerLevel` та `CraftWorldBorder` |
-| `world-environment.environment-attributes` | `boolean` | `true` | `ENV_ENVIRONMENT_ATTRIBUTES` - щотікове оновлення кешу `EnvironmentAttributeSystem` |
-| `world-environment.game-events` | `boolean` | `true` | `ENV_GAME_EVENTS` - розсилка вібрацій `GameEvent` (скалк-сенсори, варден, спеї) |
+| `world-environment.daylight-cycle` | `boolean` | `true` | `ENV_DAYLIGHT_CYCLE` - time progression, sky light updates, and time packet broadcasts. |
+| `world-environment.weather` | `boolean` | `true` | `ENV_WEATHER` - rain, thunderstorms, lightning, and snow/ice accumulation. |
+| `world-environment.raids` | `boolean` | `true` | `ENV_RAIDS` - village raid creation and ticking. |
+| `world-environment.sleep-cycle` | `boolean` | `true` | `ENV_SLEEP_CYCLE` - bed night-skip checks. |
+| `world-environment.end-dragon-fight` | `boolean` | `true` | `ENV_END_DRAGON_FIGHT` - `EndDragonFight` logic in the End. |
+| `world-environment.world-border-tick` | `boolean` | `true` | `ENV_WORLD_BORDER_TICK` - world border ticking in `ServerLevel` and `CraftWorldBorder`. |
+| `world-environment.environment-attributes` | `boolean` | `true` | `ENV_ENVIRONMENT_ATTRIBUTES` - per-tick cache invalidation in `EnvironmentAttributeSystem`. |
+| `world-environment.game-events` | `boolean` | `true` | `ENV_GAME_EVENTS` - `GameEvent` vibration dispatch (sculk sensors, wardens, allays). |
 
-### `spawning` - Природний спавн мобів
+### `spawning` - Natural Mob Spawning
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `spawning.natural.enabled` | `boolean` | `true` | `SPAWNING_NATURAL` - **[Головний вимикач]** природний спавн і спецспавнери |
-| `spawning.natural.sub-features.monsters` | `boolean` | `true` | `SPAWNING_MONSTERS` - категорія `MobCategory.MONSTER` |
-| `spawning.natural.sub-features.animals` | `boolean` | `true` | `SPAWNING_ANIMALS` - тварини та решта мирних/водних/атмосферних категорій |
-| `spawning.natural.sub-features.custom-spawners` | `boolean` | `true` | `SPAWNING_CUSTOM_SPAWNERS` - фантоми, патрулі, коти, облоги сіл і мандрівний торговець |
+| `spawning.natural.enabled` | `boolean` | `true` | `SPAWNING_NATURAL` - **[Master switch]** natural mob spawning and custom spawners. |
+| `spawning.natural.sub-features.monsters` | `boolean` | `true` | `SPAWNING_MONSTERS` - `MobCategory.MONSTER`. |
+| `spawning.natural.sub-features.animals` | `boolean` | `true` | `SPAWNING_ANIMALS` - animals and all remaining passive/aquatic/ambient categories. |
+| `spawning.natural.sub-features.custom-spawners` | `boolean` | `true` | `SPAWNING_CUSTOM_SPAWNERS` - phantoms, patrols, cats, village sieges, and wandering traders. |
 
-### `entities` - Штучний інтелект і колізії
+### `entities` - AI & Collisions
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `entities.ai.enabled` | `boolean` | `true` | `ENTITIES_AI_ENABLED` - **[Головний вимикач]** AI мобів (реєстрація цілей, `inactiveTick`, `serverAiStep`) |
-| `entities.ai.type-filter` | `List<String>` | `[]` | Список ID типів сутностей із вимкненим AI при `enabled: true` (без префікса нормалізується до `minecraft:<id>`) |
-| `entities.ai.sub-features.goal-selector` | `boolean` | `true` | `ENTITIES_AI_GOAL_SELECTOR` - тіки `GoalSelector` та `targetSelector` |
-| `entities.ai.sub-features.brain` | `boolean` | `true` | `ENTITIES_AI_BRAIN` - десеризація та тіки `Brain` |
-| `entities.ai.sub-features.pathfinding` | `boolean` | `true` | `ENTITIES_AI_PATHFINDING` - перерахунок шляхів у `PathNavigation` |
-| `entities.ai.sub-features.sensors` | `boolean` | `true` | `ENTITIES_AI_SENSORS` - сенсори `Brain` та кеш лінії зору `Sensing` |
-| `entities.collisions.entities` | `boolean` | `true` | `ENTITIES_COLLISIONS` - **[Головний вимикач]** фізичні зіштовхування між усіма сутностями |
-| `entities.collisions.players` | `boolean` | `true` | `ENTITIES_PLAYER_COLLISIONS` - зіштовхування гравців між собою (коли `entities: true`) |
-| `entities.despawn-checks` | `boolean` | `true` | `ENTITIES_DESPAWN_CHECKS` - щотікова перевірка дистанції деспавну `Entity#checkDespawn` |
-| `entities.inside-block-checks` | `boolean` | `true` | `ENTITIES_INSIDE_BLOCK_CHECKS` - перевірка перетину з блоками під час руху (павутина, портали, кущі) |
-| `entities.fluid-interaction` | `boolean` | `true` | `ENTITIES_FLUID_INTERACTION` - перевірка контакту з водою/лавою та стану плавання в `Entity#baseTick` |
-| `entities.sprint-particles` | `boolean` | `true` | `ENTITIES_SPRINT_PARTICLES` - серверна генерація частинок бігу в `Entity#baseTick` |
+| `entities.ai.enabled` | `boolean` | `true` | `ENTITIES_AI_ENABLED` - **[Master switch]** mob AI (goal registration, `inactiveTick`, `serverAiStep`). |
+| `entities.ai.type-filter` | `List<String>` | `[]` | Entity type IDs whose AI stays disabled while `enabled: true` (unprefixed IDs default to `minecraft:<id>`). |
+| `entities.ai.sub-features.goal-selector` | `boolean` | `true` | `ENTITIES_AI_GOAL_SELECTOR` - `GoalSelector` and `targetSelector` ticks. |
+| `entities.ai.sub-features.brain` | `boolean` | `true` | `ENTITIES_AI_BRAIN` - `Brain` deserialization and ticking. |
+| `entities.ai.sub-features.pathfinding` | `boolean` | `true` | `ENTITIES_AI_PATHFINDING` - path recomputation in `PathNavigation`. |
+| `entities.ai.sub-features.sensors` | `boolean` | `true` | `ENTITIES_AI_SENSORS` - `Brain` sensors and `Sensing` line-of-sight cache. |
+| `entities.collisions.entities` | `boolean` | `true` | `ENTITIES_COLLISIONS` - **[Master switch]** physical collisions between all entities. |
+| `entities.collisions.players` | `boolean` | `true` | `ENTITIES_PLAYER_COLLISIONS` - player-to-player collisions (active when `entities: true`). |
+| `entities.despawn-checks` | `boolean` | `true` | `ENTITIES_DESPAWN_CHECKS` - per-tick distance checks in `Entity#checkDespawn`. |
+| `entities.inside-block-checks` | `boolean` | `true` | `ENTITIES_INSIDE_BLOCK_CHECKS` - block intersection checks while moving (cobwebs, portals, berry bushes). |
+| `entities.fluid-interaction` | `boolean` | `true` | `ENTITIES_FLUID_INTERACTION` - water/lava contact and swimming checks in `Entity#baseTick`. |
+| `entities.sprint-particles` | `boolean` | `true` | `ENTITIES_SPRINT_PARTICLES` - server-side sprint particle generation in `Entity#baseTick`. |
 
-### `gameplay` - Прогресія та датапаки
+### `gameplay` - Progression & Datapacks
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `gameplay.advancements` | `boolean` | `true` | `GAMEPLAY_ADVANCEMENTS` - завантаження реєстру досягнень і трекінг `PlayerAdvancements` |
-| `gameplay.recipes` | `boolean` | `true` | `GAMEPLAY_RECIPES` - завантаження реєстру рецептів та синхронізація `ServerRecipeBook` |
-| `gameplay.loot-tables` | `boolean` | `true` | `GAMEPLAY_LOOT_TABLES` - парсинг ~1100 JSON-таблиць луту на старті |
-| `gameplay.command-functions` | `boolean` | `true` | `GAMEPLAY_COMMAND_FUNCTIONS` - щотікове виконання `.mcfunction` у `ServerFunctionManager` |
+| `gameplay.advancements` | `boolean` | `true` | `GAMEPLAY_ADVANCEMENTS` - loads the advancement registry and tracks `PlayerAdvancements`. |
+| `gameplay.recipes` | `boolean` | `true` | `GAMEPLAY_RECIPES` - loads the recipe registry and syncs `ServerRecipeBook`. |
+| `gameplay.loot-tables` | `boolean` | `true` | `GAMEPLAY_LOOT_TABLES` - parses ~1100 JSON loot tables at boot. |
+| `gameplay.command-functions` | `boolean` | `true` | `GAMEPLAY_COMMAND_FUNCTIONS` - per-tick `.mcfunction` execution in `ServerFunctionManager`. |
 
-### `players` - Дані та механіки гравців
+### `players` - Player Data & Mechanics
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `players.data-saving` | `boolean` | `true` | `PLAYERS_DATA_SAVING` - запис `.dat`-файлів гравців, `stats/` і `advancements/` (`false` блокує будь-які дискові записи, включно з legacy-міграцією статистики) |
-| `players.hunger` | `boolean` | `true` | `PLAYERS_HUNGER` - тіки `FoodData` (голод і регенерація) |
-| `players.statistics` | `boolean` | `true` | `PLAYERS_STATISTICS` - нарахування ванільної статистики гравця (без впливу на критерії досягнень) |
-| `players.warden-tracker` | `boolean` | `true` | `PLAYERS_WARDEN_TRACKER` - тіки `WardenSpawnTracker` на гравця |
-| `players.locator-bar` | `boolean` | `true` | `PLAYERS_LOCATOR_BAR` - трекінг вейпоїнтів та атрибута `WAYPOINT_TRANSMIT_RANGE` для Locator Bar (26.3) |
-| `players.inventory-special-item-updates` | `boolean` | `true` | `PLAYERS_INVENTORY_SPECIAL_UPDATES` - щотікове сканування слотів інвентаря для спецпредметів (мапи, компаси) |
-| `players.vanilla-scoreboard-criteria` | `boolean` | `true` | `PLAYERS_VANILLA_SCOREBOARD_CRITERIA` - оновлення ванільних критеріїв скорборду (здоров'я, їжа, броня, досвід) |
-| `players.floating-kick` | `boolean` | `true` | `PLAYERS_FLOATING_KICK` - кік за тривале зависання в повітрі без `allowFlight` |
+| `players.data-saving` | `boolean` | `true` | `PLAYERS_DATA_SAVING` - writes player `.dat` files, `stats/`, and `advancements/` (`false` stops all disk writes, including legacy stats migration). |
+| `players.hunger` | `boolean` | `true` | `PLAYERS_HUNGER` - `FoodData` ticks (hunger and regeneration). |
+| `players.statistics` | `boolean` | `true` | `PLAYERS_STATISTICS` - vanilla player statistics tracking (without affecting advancement triggers). |
+| `players.warden-tracker` | `boolean` | `true` | `PLAYERS_WARDEN_TRACKER` - per-player `WardenSpawnTracker` ticks. |
+| `players.locator-bar` | `boolean` | `true` | `PLAYERS_LOCATOR_BAR` - waypoint tracking and `WAYPOINT_TRANSMIT_RANGE` updates for the Locator Bar. |
+| `players.inventory-special-item-updates` | `boolean` | `true` | `PLAYERS_INVENTORY_SPECIAL_UPDATES` - per-tick inventory scans for special items (maps, compasses). |
+| `players.vanilla-scoreboard-criteria` | `boolean` | `true` | `PLAYERS_VANILLA_SCOREBOARD_CRITERIA` - updates vanilla scoreboard criteria (health, food, armor, XP). |
+| `players.floating-kick` | `boolean` | `true` | `PLAYERS_FLOATING_KICK` - kicks players hovering in mid-air without `allowFlight`. |
 
-### `network` - Мережа, телеметрія та фільтрація пакетів
+### `network` - Networking, Telemetry & Packet Clamping
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `network.generate-keypair` | `boolean` | `true` | `NETWORK_GENERATE_KEYPAIR` - генерація RSA-ключів на старті (ліниво створюється при зверненні до `getKeyPair()`) |
-| `network.analytics.bstats` | `boolean` | `true` | `ANALYTICS_BSTATS` - збірник телеметрії bStats (`serviceId = 35466`) |
-| `network.analytics.spark` | `boolean` | `true` | `ANALYTICS_SPARK` - вбудований профайлер Spark, команда `/spark` і тік-хуки |
-| `network.analytics.tick-monitor` | `boolean` | `true` | `ANALYTICS_TICK_MONITOR` - монітор активності тіків `serverActivityMonitor` |
-| `network.analytics.debug-synchronizers` | `boolean` | `true` | `ANALYTICS_DEBUG_SYNCHRONIZERS` - розсилка `debugSynchronizers` у `ServerLevel` |
-| `network.player-list.server-ping-sample` | `boolean` | `true` | `NETWORK_SERVER_PING_SAMPLE` - список гравців у відповіді на MOTD-пінг (`false` = `List.of()`) |
-| `network.player-list.tab-latency-updates` | `boolean` | `true` | `NETWORK_TAB_LATENCY_UPDATES` - періодична $O(N^2)$ розсилка пінгу в Tab у `PlayerList#tick()` |
-| `network.packet-range-clamping.full-packet-broadcast` | `boolean` | `true` | `NETWORK_FULL_PACKET_BROADCAST` - **[Головний вимикач]** при `false` активує ліміти нижче |
-| `network.packet-range-clamping.projectile-tracking-range` | `int` | `32` | Макс. дальність трекінгу снарядів (клампиться в `[0, 256]`) |
-| `network.packet-range-clamping.particle-broadcast-range` | `double` | `16.0` | Макс. радіус пакетів частинок (клампиться в `[0.0, 256.0]`; `NaN` -> `16.0`) |
-| `network.packet-range-clamping.armor-equipment-range` | `int` | `32` | Макс. дистанція оновлення екіпіровки `LivingEntity` (клампиться в `[0, 256]`) |
+| `network.generate-keypair` | `boolean` | `true` | `NETWORK_GENERATE_KEYPAIR` - generates RSA keys at startup (falls back to lazy creation when `getKeyPair()` is called). |
+| `network.analytics.bstats` | `boolean` | `true` | `ANALYTICS_BSTATS` - bStats telemetry collector (`serviceId = 35466`). |
+| `network.analytics.spark` | `boolean` | `true` | `ANALYTICS_SPARK` - bundled Spark profiler, `/spark` command, and tick hooks. |
+| `network.analytics.tick-monitor` | `boolean` | `true` | `ANALYTICS_TICK_MONITOR` - `serverActivityMonitor` tick activity tracker. |
+| `network.analytics.debug-synchronizers` | `boolean` | `true` | `ANALYTICS_DEBUG_SYNCHRONIZERS` - broadcasts `debugSynchronizers` in `ServerLevel`. |
+| `network.player-list.server-ping-sample` | `boolean` | `true` | `NETWORK_SERVER_PING_SAMPLE` - includes player samples in MOTD ping responses (`false` = `List.of()`). |
+| `network.player-list.tab-latency-updates` | `boolean` | `true` | `NETWORK_TAB_LATENCY_UPDATES` - periodic $O(N^2)$ Tab latency broadcast in `PlayerList#tick()`. |
+| `network.packet-range-clamping.full-packet-broadcast` | `boolean` | `true` | `NETWORK_FULL_PACKET_BROADCAST` - **[Master switch]** when `false`, enforces the distance caps below. |
+| `network.packet-range-clamping.projectile-tracking-range` | `int` | `32` | Max tracking distance for projectiles (clamped to `[0, 256]`). |
+| `network.packet-range-clamping.particle-broadcast-range` | `double` | `16.0` | Max radius for particle packets (clamped to `[0.0, 256.0]`; `NaN` -> `16.0`). |
+| `network.packet-range-clamping.armor-equipment-range` | `int` | `32` | Max range for `LivingEntity` armor updates (clamped to `[0, 256]`). |
 
-### `storage`, `system` та `compatibility`
+### `storage`, `system` & `compatibility`
 
-| Ключ | Тип | За замовчуванням | `Feature` / Примітка |
+| Key | Type | Default | `Feature` / Notes |
 | --- | --- | --- | --- |
-| `storage.world-saving` | `boolean` | `true` | `STORAGE_WORLD_SAVING` - запис чанків, регіонів, `level.dat`, `SavedData`, `stats/` і `advancements/`; `false` = режим лише в RAM (`0` дискових записів) |
-| `storage.periodic-autosave` | `boolean` | `true` | `STORAGE_PERIODIC_AUTOSAVE` - фонове автозбереження чанків і гравців під час тіків (при `world-saving: false` вимкнено; `/save-all`, вивантаження і стоп працюють) |
-| `system.lifecycle.graceful-shutdown` | `boolean` | `true` | `SYSTEM_GRACEFUL_SHUTDOWN` - очікування асинхронних задач і повного скидання даних при зупинці |
-| `compatibility.legacy.plugin-bytecode-rerouting` | `boolean` | `true` | `LEGACY_PLUGIN_BYTECODE_REROUTING` - ASM-переписування байткоду плагінів через `Commodore` |
-| `compatibility.legacy.bootstrap-data-tables` | `boolean` | `true` | `LEGACY_BOOTSTRAP_DATA_TABLES` - таблиці конвертації блоків/предметів до 1.13 у `Bootstrap` |
-| `compatibility.legacy.validate-entity-attributes` | `boolean` | `true` | `LEGACY_VALIDATE_ENTITY_ATTRIBUTES` - примусове завантаження класів мобів та валідація `DefaultAttributes` |
+| `storage.world-saving` | `boolean` | `true` | `STORAGE_WORLD_SAVING` - writes chunks, region files, `level.dat`, `SavedData`, `stats/`, and `advancements/`. `false` keeps everything in RAM (`0` disk writes). |
+| `storage.periodic-autosave` | `boolean` | `true` | `STORAGE_PERIODIC_AUTOSAVE` - background chunk and player autosaves during ticks (disabled when `world-saving: false`; `/save-all`, unloads, and shutdown saves still run). |
+| `system.lifecycle.graceful-shutdown` | `boolean` | `true` | `SYSTEM_GRACEFUL_SHUTDOWN` - waits for async tasks and flushes all pending data on stop. |
+| `compatibility.legacy.plugin-bytecode-rerouting` | `boolean` | `true` | `LEGACY_PLUGIN_BYTECODE_REROUTING` - ASM plugin bytecode rewriting via `Commodore`. |
+| `compatibility.legacy.bootstrap-data-tables` | `boolean` | `true` | `LEGACY_BOOTSTRAP_DATA_TABLES` - pre-1.13 block/item legacy conversion tables in `Bootstrap`. |
+| `compatibility.legacy.validate-entity-attributes` | `boolean` | `true` | `LEGACY_VALIDATE_ENTITY_ATTRIBUTES` - eager loading of mob classes and `DefaultAttributes` validation. |
 
 ---
 
-## Секція `messages.commands` (MiniMessage)
+## `messages.commands` Section
 
-Усі 26 ключів мають тип `@Nullable String` і підтримують форматування **MiniMessage**. Якщо задати порожній рядок `""`, вивід відповідного повідомлення вимикається (`ApisMessageRenderer.render`).
+All 26 keys are `@Nullable String` values using **MiniMessage** formatting. Set any key to `""` to silence that message (`ApisMessageRenderer.render`).
 
-| Ключ | Плейсхолдери | Значення за замовчуванням |
+| Key | Placeholders | Default Value |
 | --- | --- | --- |
 | `no-permission` | - | `<red>You do not have permission to execute this command.` |
 | `player-only` | - | `<red>Only players can run this command without explicit world/coordinates.` |
@@ -218,37 +218,37 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ---
 
-## Механізм `ApisConfigSync`
+## How `ApisConfigSync` Works
 
-Щоб уникнути конфліктів між однаковими параметрами у спадкових файлах Vanilla, Bukkit, Spigot і Paper, клас `org.apismc.apis.config.ApisConfigSync` примусово перезаписує дзеркальні поля в пам'яті та **вирізає дублюючі ключі** під час запису конфігів на диск.
+To stop duplicate settings across Vanilla, Bukkit, Spigot, and Paper configs from drifting out of sync, `org.apismc.apis.config.ApisConfigSync` overwrites mirrored in-memory fields and **strips overlapping keys** before writing legacy files to disk.
 
-```d2 title="Синхронізація конфігів через ApisConfigSync"
+```d2 title="Config Sync via ApisConfigSync"
 direction: down
 
 apis: "configs/apis.yml"
 sync: "ApisConfigSync"
-props: "server.properties\n(видаляє allow-nether,\nspawn-*)"
-bukkit: "bukkit.yml\n(видаляє\nsettings.allow-end)"
-spigot: "spigot.yml\n(видаляє advancements.*,\nplayers.disable-saving)"
-paper: "paper-global.yml\nта paper-world*.yml"
+props: "server.properties\n(strips allow-nether,\nspawn-*)"
+bukkit: "bukkit.yml\n(strips\nsettings.allow-end)"
+spigot: "spigot.yml\n(strips advancements.*,\nplayers.disable-saving)"
+paper: "paper-global.yml\nand paper-world*.yml"
 
-apis -> sync: "Старт або /apis reload"
+apis -> sync: "Boot or /apis reload"
 sync -> props
 sync -> bukkit
 sync -> spigot
 sync -> paper
 ```
 
-### Таблиця синхронізації та очищення
+### Sync & Stripping Matrix
 
-| Конфіг / Клас | Що перевизначається в runtime | Які ключі видаляються перед збереженням на диск |
+| Config / Class | Runtime Overrides | Keys Stripped Before Disk Save |
 | --- | --- | --- |
-| `configs/server.properties` (`Settings.java.patch`) | Значення беруться з `apis.yml` | `allow-nether`, `spawn-monsters`, `spawn-animals`, `spawn-npcs` |
-| `configs/bukkit.yml` (`CraftServer.java.patch`) | `CraftServer#getAllowEnd()` читає `!ApisHooks.isDimensionDisabled(Level.END)` | `settings.allow-end` (у конфігу та дефолтах) |
-| `configs/spigot.yml` (`SpigotConfig.java.patch`, `Main.java.patch`) | `SpigotConfig.disableAdvancementSaving`, `disabledAdvancements` (`["*"]` або `[]`), `disablePlayerDataSaving` | `advancements.disable-saving`, `advancements.disabled`, `players.disable-saving` (та порожні секції `advancements`, `players`) |
-| `configs/paper-global.yml` (`Configurations.java.patch`) | `GlobalConfiguration`: `misc.enableNether`, `collisions.enablePlayerCollisions`, `spark.enabled`, `spark.enableImmediately` (`false` при вимкненому Spark), `updateChecker.enabled` | `misc.enable-nether`, `collisions.enable-player-collisions` |
+| `configs/server.properties` (`Settings.java.patch`) | Values read from `apis.yml` | `allow-nether`, `spawn-monsters`, `spawn-animals`, `spawn-npcs` |
+| `configs/bukkit.yml` (`CraftServer.java.patch`) | `CraftServer#getAllowEnd()` reads `!ApisHooks.isDimensionDisabled(Level.END)` | `settings.allow-end` (in both config and defaults) |
+| `configs/spigot.yml` (`SpigotConfig.java.patch`, `Main.java.patch`) | `SpigotConfig.disableAdvancementSaving`, `disabledAdvancements` (`["*"]` or `[]`), `disablePlayerDataSaving` | `advancements.disable-saving`, `advancements.disabled`, `players.disable-saving` (plus empty `advancements` / `players` sections) |
+| `configs/paper-global.yml` (`Configurations.java.patch`) | `GlobalConfiguration`: `misc.enableNether`, `collisions.enablePlayerCollisions`, `spark.enabled`, `spark.enableImmediately` (`false` when Spark is off), `updateChecker.enabled` | `misc.enable-nether`, `collisions.enable-player-collisions` |
 | `configs/paper-world*.yml` (`Configurations.java.patch`) | `WorldConfiguration`: `environment.disableThunder`, `environment.disableIceAndSnow`, `unsupportedSettings.ticking.chunks` | `environment.disable-thunder`, `environment.disable-ice-and-snow`, `unsupported-settings.ticking.chunks` |
 
 :::tip
-При виконанні `/apis reload` ядро автоматично викликає `ApisConfigSync.syncAll(server)`, що миттєво оновлює дзеркальні прапорці у `SpigotConfig`, `GlobalConfiguration` та всіх завантажених `ServerLevel#paperConfig()`.
+Running `/apis reload` calls `ApisConfigSync.syncAll(server)` right away, updating mirrored flags inside `SpigotConfig`, `GlobalConfiguration`, and every loaded `ServerLevel#paperConfig()`.
 :::

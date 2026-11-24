@@ -1,56 +1,56 @@
 ---
-title: Standalone-світи та сховище
-description: Вбудоване керування світами в папці worlds/ замість Multiverse-Core, файл world.yml, робота без запису на диск і розблокування session.lock.
+title: Standalone Worlds & Storage
+description: Built-in worlds/ management replacing Multiverse-Core, world.yml config, RAM-only mode (0 disk writes), and stale session.lock recovery.
 sidebar:
   order: 1
 ---
 
-Apis має вбудоване керування світами, яке замінює сторонні плагіни на кшталт Multiverse-Core. Усе працює одразу «з коробки» при `dimensions.mode: standalone` у [`configs/apis.yml`](../../configuration/apis-config/).
+Apis includes built-in multi-world management that replaces external plugins like Multiverse-Core. It works out of the box when `dimensions.mode: standalone` is set in [`configs/apis.yml`](/configuration/apis-config/).
 
-## Папка `worlds/` та автозавантаження
+## The `worlds/` Folder & Auto-Loading
 
-```d2 title="Архітектура керування світами у режимі standalone"
+```d2 title="Standalone World Management Architecture"
 direction: down
 
-boot: "Старт сервера (dimensions.mode = standalone)"
-lock: "Перевірка session.lock (PID та hostId)"
+boot: "Server Boot (dimensions.mode = standalone)"
+lock: "session.lock Check (PID & hostId)"
 hub: "worlds/hub (fallback-world + world.yml)"
-extra: "Інші теки worlds/* (Void-генератор + world.yml)"
-unload: "Команда /world unload"
+extra: "Other worlds/* dirs (Void generator + world.yml)"
+unload: "/world unload"
 save: "storage.world-saving?"
-disk: "Запис на диск (region/*.mca)"
-ram: "Режим лише в RAM (0 записів)"
+disk: "Disk Writes (region/*.mca)"
+ram: "RAM-Only Mode (0 disk writes)"
 
 boot -> lock
-lock -> hub: "Основний світ"
-boot -> extra: "Автозавантаження підпапок"
+lock -> hub: "Primary world"
+boot -> extra: "Auto-load subfolders"
 extra -> unload
-unload -> hub: "Евакуація гравців на спавн"
+unload -> hub: "Evacuate players to spawn"
 hub -> save
 save -> disk: "true"
 save -> ram: "false"
 ```
 
-Замість того щоб тримати `world/`, `world_nether/` і `world_the_end/` у корені сервера, усі світи складаються в одну папку `worlds/` (можна змінити прапорцем `--worlds-dir`):
+Instead of cluttering the root folder with `world/`, `world_nether/`, and `world_the_end/`, Apis keeps all worlds inside `worlds/` (configurable via `--worlds-dir`):
 
-- Незер та Енд у `standalone`-режимі не створюються і не завантажуються автоматично.
-- Усі підпапки всередині `worlds/` (крім прихованих, що починаються з `.`) підвантажуються автоматично при старті як порожні **Void-світи** без генерації руд, біомів чи структур.
-- Кожен світ зберігається у простій теці `worlds/<назва>/` без примусового перенесення в підпапки `dimensions/minecraft/...`.
-
----
-
-## Базовий світ (`fallback-world`)
-
-Параметр `dimensions.fallback-world` (за замовчуванням `hub`) задає головний світ сервера:
-
-- саме у нього за замовчуванням потрапляють гравці при вході та сюди ж їх евакуює команда `/world unload`, коли вивантажується інший світ;
-- якщо тека `worlds/hub/` ще порожня на момент першого старту, Apis сам створить базову бедрок-платформу на координаті `(0, 60, 0)` і конфіг `worlds/hub/world.yml` зі спавном `(0.5, 61.0, 0.5)`.
+- Nether and End are not auto-created or loaded in `standalone` mode.
+- Every subfolder inside `worlds/` (excluding hidden dot-folders like `.git`) auto-loads at startup as an empty **Void** world with no ore, biome, or structure generation.
+- Each world lives cleanly at `worlds/<name>/` without nested `dimensions/minecraft/...` subdirectories.
 
 ---
 
-## Налаштування світу: `worlds/<world>/world.yml`
+## Fallback World (`fallback-world`)
 
-Для кожного світу в `worlds/` створюється файл `world.yml`:
+`dimensions.fallback-world` (default `hub`) defines the primary server world:
+
+- Players spawn here on join and get evacuated to its spawn point when another world is unloaded via `/world unload`.
+- If `worlds/hub/` is empty on first boot, Apis generates a starter bedrock platform at `(0, 60, 0)` and writes `worlds/hub/world.yml` with spawn `(0.5, 61.0, 0.5)`.
+
+---
+
+## World Config: `worlds/<world>/world.yml`
+
+Each world folder in `worlds/` gets its own `world.yml`:
 
 ```yaml
 spawn:
@@ -63,52 +63,52 @@ force-spawn: true
 default-game-mode: adventure
 ```
 
-| Параметр | За замовчуванням | Що робить |
+| Key | Default | Behavior |
 | --- | --- | --- |
-| `spawn.x`, `spawn.y`, `spawn.z` | `0.5`, `61.0`, `0.5` | Точні координати спавну у світі |
-| `spawn.yaw`, `spawn.pitch` | `0.0`, `0.0` | Напрямок погляду гравця |
-| `force-spawn` | `true` | При `true` гравець при кожному вході з'являється на точці спавну з `world.yml`, а не там, де вийшов |
-| `default-game-mode` | `"survival"` | Доступні: `survival`, `creative`, `adventure`, `spectator`. Примусово встановлюється при вході, респавні та переході між світами |
+| `spawn.x`, `spawn.y`, `spawn.z` | `0.5`, `61.0`, `0.5` | Exact spawn coordinates |
+| `spawn.yaw`, `spawn.pitch` | `0.0`, `0.0` | Player camera orientation |
+| `force-spawn` | `true` | Teleports joining players to `world.yml` spawn every time instead of last logout position |
+| `default-game-mode` | `"survival"` | `survival`, `creative`, `adventure`, or `spectator`. Enforced on join, respawn, and world change |
 
 :::tip
-Щоб задати спавн прямо з гри, станьте на потрібну точку й виконайте [`/setworldspawn`](../commands/#setworldspawn) - координати автоматично запишуться у `world.yml`.
+To set spawn in-game, stand on the target block and run [`/setworldspawn`](/worlds/commands/#setworldspawn-standalone-override). Exact coordinates are saved straight to `world.yml`.
 :::
 
 ---
 
-## Робота без запису на диск (`storage.world-saving: false`)
+## RAM-Only Mode (`storage.world-saving: false`)
 
-Для хабів та арен мініігор, які не повинні змінюватися після перезапуску, можна повністю вимкнути запис на диск у `configs/apis.yml`:
+For hubs and minigame arenas that should reset cleanly on every restart, disable disk saving in `configs/apis.yml`:
 
 ```yaml
 storage:
   world-saving: false
 ```
 
-У цьому режимі:
-- чанки, регіони, `level.dat` та `data/*.dat` не зберігаються на диск;
-- файли прогресу й даних гравців (`playerdata/`, `stats/`, `advancements/`) не записуються на диск і не створюють порожніх каталогів (включно з пропуском legacy-переносу статистики);
-- порожні світи поза `dimensions.always-ticking` автоматично не тікають за відсутності гравців (`dimensions.never-ticking` блокує тіки навіть із гравцями);
-- при зупинці сервера не витрачається час на скидання буферів світів (особливо разом із `system.lifecycle.graceful-shutdown: false`).
+In this mode:
+- chunks, region files, `level.dat`, and `data/*.dat` are never written to disk;
+- player data (`playerdata/`, `stats/`, `advancements/`) is not written and creates zero empty folders (legacy stats migration is skipped too);
+- empty worlds outside `dimensions.always-ticking` automatically sleep with 0 players (`dimensions.never-ticking` blocks ticking even when players are inside);
+- server shutdown skips flushing world buffers (especially fast when paired with `system.lifecycle.graceful-shutdown: false`).
 
 :::tip
-Якщо потрібно зберігати зміни при вивантаженні та зупинці сервера, але прибрати фонове навантаження під час тіків, залиште `storage.world-saving: true` і вимкніть `storage.periodic-autosave: false`. Команда `/save-all`, вивантаження чанків і збереження при стопі працюватимуть як зазвичай (а при `world-saving: false` періодичне автозбереження вимикається автоматично).
+If you want `/save-all`, unloads, and shutdown saves to work while disabling background tick saves, keep `storage.world-saving: true` and set `storage.periodic-autosave: false`. Setting `world-saving: false` automatically disables periodic autosaves as well.
 :::
 
 ---
 
-## Автоматичне очищення завислих `session.lock`
+## Stale `session.lock` Auto-Recovery
 
-Після аварійного падіння контейнера чи процесу (`SIGKILL`) у папках світів інколи залишається файл `session.lock`, через який сервер відмовляється запускатися.
+After an abrupt container kill (`SIGKILL`), leftover `session.lock` files normally block startup.
 
-- **У звичайному режимі:** Apis записує у `session.lock` PID процесу-власника та ідентифікатор хоста. Якщо при наступному запуску виявляється конфлікт блокування, але старий процес уже не існує, ядро автоматично знімає завислий `session.lock` і продовжує старт.
-- **У режимі `storage.world-saving: false`:** старий `session.lock` видаляється автоматично, а нове блокування на диску не створюється взагалі.
+- **Normal mode:** Apis stores the owning process PID and host ID inside `session.lock`. If a lock conflict occurs on boot and that PID is no longer alive on the same host, Apis clears the stale `session.lock` and continues starting.
+- **With `storage.world-saving: false`:** any old `session.lock` is deleted automatically and no new disk lock file is created.
 
 ---
 
-## Повернення до стандартного режиму (`vanilla`)
+## Returning to Standard Mode (`vanilla`)
 
-Якщо потрібно повернути звичайну генерацію ландшафту, Незер та Енд (наприклад, для survival-сервера), у `configs/apis.yml` перемкніть режим:
+If you need normal terrain generation, Nether, and End for a survival server, switch mode in `configs/apis.yml`:
 
 ```yaml
 dimensions:

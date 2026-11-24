@@ -1,85 +1,85 @@
 ---
-title: Вплив плагінів та реальні бенчмарки
-description: Розподіл часу запуску Apis, порівняння з Paper за результатами тестів на Minecraft 26.3 та рекомендації щодо добору плагінів.
+title: Plugin Impact & Real Benchmarks
+description: Startup breakdown for Apis, head-to-head Minecraft 26.3 benchmarks against Paper, and practical plugin stack recommendations.
 sidebar:
   order: 1
 ---
 
-Ініціалізація самого ядра **Apis** (до етапу `Starting minecraft server`) займає менше секунди (**~0.85 с** за вимірами `initToMcMs`). Водночас у реальному продакшні основну частину часу запуску та навантаження формують саме плагіни в `addons/`. Нижче наведено реальні дані тестування **Apis** проти **Paper 26.3** в однакових умовах.
+**Apis** itself finishes engine initialization up to `Starting minecraft server` in under a second (**~0.85s** measured by `initToMcMs`). In production, most startup time and runtime load comes from plugins inside `addons/`. Below are real numbers comparing **Apis** against **Paper 26.3** under identical test conditions.
 
-## Умови тестування (прямий протокол Minecraft 26.3)
+## Test Setup (Direct Minecraft 26.3 Protocol)
 
-Усі виміри виконано в ізольованих Docker-контейнерах (`linux/arm64`, обмеження **4 vCPU**, **4 GiB RAM**, **Java 25 Temurin**, `-Xms2G -Xmx3G`, з увімкненим AOT-кешем).  
-На обох серверах працював однаковий набір із **9 популярних плагінів**: `ViaVersion 5.12.2`, `LuckPerms 5.5.71`, `KaMenu 2.1.0`, `FancyNpcs 2.12.1`, `Skript 2.17.1`, `emotecraft 3.5.0`, `TAB 6.2.1`, `WorldEdit 7.4.6` і `GrimAC 2.3.74` (разом із `PacketEvents 2.14.1`). На Apis у `configs/apis.yml` було активовано 70 kill-switches.
+All benchmarks ran in isolated Docker containers (`linux/arm64`, capped at **4 vCPU**, **4 GiB RAM**, **Java 25 Temurin**, `-Xms2G -Xmx3G`, with AOT cache enabled).  
+Both servers loaded the exact same set of **9 popular plugins**: `ViaVersion 5.12.2`, `LuckPerms 5.5.71`, `KaMenu 2.1.0`, `FancyNpcs 2.12.1`, `Skript 2.17.1`, `emotecraft 3.5.0`, `TAB 6.2.1`, `WorldEdit 7.4.6`, and `GrimAC 2.3.74` (along with `PacketEvents 2.14.1`). Apis ran with 70 kill-switches active in `configs/apis.yml`.
 
 ---
 
-## На що витрачається час запуску
+## Where Startup Time Goes
 
-За профілюванням старту Apis із 9 плагінами (середнє за 3 прогонами, повний `Done` - **5.52 с**, найкращий прогін - **5.01 с**):
+Profiling Apis boot with all 9 plugins loaded (3-run average `Done` time: **5.52s**, best run: **5.01s**):
 
-| Етап запуску | Середній час | Частка від старту |
+| Boot Stage | Avg Time | Share of Startup |
 | --- | --- | --- |
-| Ініціалізація ядра до `Starting minecraft server` | **0.85 с** (`845.8 ms`) | ~15% |
-| Підготовка провайдерів до `onLoad` | **0.43 с** (`433.4 ms`) | ~8% |
-| Фаза `onLoad` 9 плагінів | **1.49 с** (`1485.3 ms`) | ~27% |
-| Фаза `onEnable` 9 плагінів (`LuckPerms`, `WorldEdit`, `Skript`, `GrimAC` тощо) | **2.44 с** (`2435.6 ms`) | ~44% |
+| Core init up to `Starting minecraft server` | **0.85s** (`845.8 ms`) | ~15% |
+| Provider setup before `onLoad` | **0.43s** (`433.4 ms`) | ~8% |
+| `onLoad` phase across 9 plugins | **1.49s** (`1485.3 ms`) | ~27% |
+| `onEnable` phase across 9 plugins (`LuckPerms`, `WorldEdit`, `Skript`, `GrimAC`, etc.) | **2.44s** (`2435.6 ms`) | ~44% |
 
-Через те, що сторонні плагіни самостійно завантажують власні бібліотеки, бази даних (наприклад, H2 у `LuckPerms`), аліаси `Skript` і мапінги пакетів `PacketEvents`, навіть за ідеально налаштованого ядра сумарний старт залежить насамперед від важкості цих плагінів.
+Because plugins unpack their own libs, databases (such as H2 in `LuckPerms`), `Skript` aliases, and `PacketEvents` packet mappings, total production boot time depends mostly on plugin weight once core overhead is trimmed.
 
 ---
 
-## Порівняння Apis та Paper (100 ботів, 90 с плато)
+## Apis vs Paper (100 Bots, 90s Plateau)
 
-Тест на прямому протоколі Minecraft `26.3` (`100` ботів, `5` воркерів, `8` ботів/с, 2 прогони на кожне ядро, `0` кіків і `0` помилок):
+Tested over direct Minecraft `26.3` protocol (`100` bots, `5` workers, `8` bots/s join rate, 2 runs per server, `0` kicks and `0` errors):
 
-| Метрика (з 9 однаковими плагінами) | Paper 26.3 | Apis 26.3 | Різниця |
+| Metric (same 9 plugins) | Paper 26.3 | Apis 26.3 | Delta |
 | --- | --- | --- | --- |
-| **Холодний старт (`Done`, середній)** | 12.27 с | **6.28 с** | **~1.95x швидше** |
-| **Холодний старт (`Done`, найкращий)** | 12.04 с | **5.91 с** | **~2.08x швидше** |
-| **RAM у простої (idle)** | 1886.7 MiB | **1021.3 MiB** *(best; 1140.9 avg)* | **~1.85x менше (-46%)** |
-| **Середній MSPT (100 ботів, 5s avg)** | 27.53 ms | **10.19 ms** | **~2.70x нижче MSPT** |
-| **Середнє CPU (100 ботів)** | 380.35% | **186.43%** | **~2.04x нижче CPU** |
-| **Живий Heap після GC** | 757.2 MiB | **519.6 MiB** | **~31% менше** |
-| **Макс. пауза GC** | 516.8 - 573.7 ms | **92.7 - 140.3 ms** | **~4x коротші паузи** |
+| **Cold start (`Done`, avg)** | 12.27s | **6.28s** | **~1.95x faster** |
+| **Cold start (`Done`, best)** | 12.04s | **5.91s** | **~2.08x faster** |
+| **Idle RAM** | 1886.7 MiB | **1021.3 MiB** *(best; 1140.9 avg)* | **~1.85x less (-46%)** |
+| **Avg MSPT (100 bots, 5s avg)** | 27.53 ms | **10.19 ms** | **~2.70x lower MSPT** |
+| **Avg CPU (100 bots)** | 380.35% | **186.43%** | **~2.04x lower CPU** |
+| **Live Heap after GC** | 757.2 MiB | **519.6 MiB** | **~31% smaller** |
+| **Max GC pause** | 516.8 - 573.7 ms | **92.7 - 140.3 ms** | **~4x shorter pauses** |
 
-## Масштабування під навантаженням (ліміт-тест)
+## Scaling Under Load (Limit Test)
 
-Кроковий тест із приростом `+50` ботів на крок (та сама конфігурація з 9 плагінами та `GrimAC`; поріг зупинки `60 ms` для Apis і `70 ms` для Paper):
+Step test adding `+50` bots per stage (same 9-plugin stack with `GrimAC`; stop threshold at `60 ms` for Apis and `70 ms` for Paper):
 
-| Кількість ботів | Paper 26.3 (MSPT / TPS / CPU) | Apis 26.3 (MSPT / TPS / CPU) |
+| Bot Count | Paper 26.3 (MSPT / TPS / CPU) | Apis 26.3 (MSPT / TPS / CPU) |
 | --- | --- | --- |
-| **50 ботів** | - | **3.81 ms / 20.00 TPS / 83.2% CPU** |
-| **100 ботів** | 33.70 ms / 14.93 TPS / 386.2% CPU | **4.92 ms / 20.00 TPS / 103.0% CPU** |
-| **150 ботів** | 111.75 ms / 12.52 TPS / 403.8% CPU *(зупинка: перевищено 70 ms)* | **5.95 ms / 20.00 TPS / 114.8% CPU** |
-| **200 ботів** | CRASH (Watchdog) | **8.59 ms / 20.00 TPS / 151.6% CPU** |
-| **250 ботів** | - | **16.99 ms / 20.0 TPS** *(19.29 avg)* **/ 273.8% CPU** |
-| **300 ботів** | - | **32.59 ms / 19.9 TPS** *(18.78 avg)* **/ 402.4% CPU** |
-| **350 ботів** | - | **64.32 ms / 15.4 TPS** *(13.57 avg)* **/ 411.5% CPU** *(ліміт 60 ms)* |
+| **50 bots** | - | **3.81 ms / 20.00 TPS / 83.2% CPU** |
+| **100 bots** | 33.70 ms / 14.93 TPS / 386.2% CPU | **4.92 ms / 20.00 TPS / 103.0% CPU** |
+| **150 bots** | 111.75 ms / 12.52 TPS / 403.8% CPU *(stopped: over 70 ms)* | **5.95 ms / 20.00 TPS / 114.8% CPU** |
+| **200 bots** | CRASH (Watchdog) | **8.59 ms / 20.00 TPS / 151.6% CPU** |
+| **250 bots** | - | **16.99 ms / 20.0 TPS** *(19.29 avg)* **/ 273.8% CPU** |
+| **300 bots** | - | **32.59 ms / 19.9 TPS** *(18.78 avg)* **/ 402.4% CPU** |
+| **350 bots** | - | **64.32 ms / 15.4 TPS** *(13.57 avg)* **/ 411.5% CPU** *(60 ms cap)* |
 
-У цьому тесті **Paper** вичерпав запас продуктивності вже на **150 ботах** і впав на **200**, тоді як **Apis** до **200 ботів** утримував стабільні **`20.00 TPS`** при **`8.59 ms` MSPT**, на **300 ботах** тримав **`19.9 TPS`** (`32.59 ms`) і дійшов до **350 ботів** (`64.32 ms`, `15.4 TPS`) з **`0` кіків і `0` помилок**.
+**Paper** hit its limit at **150 bots** and crashed at **200**, while **Apis** held a flat **`20.00 TPS`** at **`8.59 ms` MSPT** through **200 bots**, stayed at **`19.9 TPS`** (`32.59 ms`) at **300 bots**, and reached **350 bots** (`64.32 ms`, `15.4 TPS`) with **`0` kicks and `0` errors**.
 
-## Повторюваність на 250 ботах та швидкий вхід (`4/с` проти `12/с`)
+## 250-Bot Repeatability & Fast Join (`4/s` vs `12/s`)
 
-Окрема перевірка стабільності на **250 ботах** (3 незалежні прогони по `90 с` плато при вході `4` боти/с і стрес-прогін при вході `12` ботів/с; `0` кіків і `0` помилок у всіх запусках):
+Dedicated stability runs at **250 bots** (3 independent runs with `90s` plateaus at `4` bots/s plus a burst run at `12` bots/s; `0` kicks and `0` errors across all runs):
 
-- **Плато `250` ботів (`4/с`, найкраще з 3 прогонів):** settled `5s MSPT` - **`14.80 ms`** (`16.70 ms` avg, середнє по 3 прогонах - `17.18 ms`), TPS на плато - **`20.0 TPS` settled** (`19.65 avg`, min `19.4`), CPU - **`253.86%`** (`265.66%` avg), Heap після GC - **`800.7 MiB`**, макс. пауза GC - **`88.97 ms`**.
-- **Прискорений вхід (`12/с`):** при потрійній швидкості підключення (`~26 с` замість `~65 с`) вижили **`250/250`** гравців, а устаканений MSPT склав **`20.50 ms`** (`20.0 TPS` наприкінці плато, CPU `318.22%`, макс. пауза GC `83.33 ms`).
+- **250-bot plateau (`4/s`, best of 3):** settled `5s MSPT` was **`14.80 ms`** (`16.70 ms` avg; 3-run mean `17.18 ms`), settled TPS was **`20.0 TPS`** (`19.65 avg`, min `19.4`), CPU **`253.86%`** (`265.66%` avg), live heap after GC **`800.7 MiB`**, max GC pause **`88.97 ms`**.
+- **Burst join (`12/s`):** triple connection speed (`~26s` vs `~65s`) kept **`250/250`** players connected, settling at **`20.50 ms` MSPT** (`20.0 TPS` by end of plateau, `318.22%` CPU, max GC pause `83.33 ms`).
 
 ---
 
-## Практичні рекомендації щодо стека плагінів
+## Plugin Stack Recommendations
 
-Щоб не нівелювати виграш ядра в часі старту й пам'яті:
+To avoid undoing the engine's startup and memory savings:
 
-| Задача на сервері | Чого краще уникати | Що обрати натомість |
+| Server Role | Avoid | Use Instead |
 | --- | --- | --- |
-| **Керування світами** | Multiverse-Core та важких менеджерів світів | Вбудовані [`worlds/` + `world.yml` + `/world` + `/tpworld`](../../worlds/standalone-mode/) |
-| **Логіка хабу або лобі** | Громіздких «все-в-одному» комбайнів і важких скриптів | Компактний спеціалізований плагін під Paper API `26.3` |
-| **Голограми та NPC** | Живих мобів або армор-стендів з AI і колізіями | Сучасні Display-сутності (`TextDisplay`) або пакетні NPC з `entities.ai.enabled: false` |
-| **Збереження стану в лобі** | Постійного запису чанків і `playerdata/` | `storage.world-saving: false` + зовнішнє сховище (Redis/SQL) лише за потреби |
-| **Сумісність плагінів** | Застарілих збірок під `1.12 - 1.20.4` | Актуальних збірок під `1.21+` / `26.3` із `compatibility.legacy.plugin-bytecode-rerouting: false` |
+| **World Management** | Multiverse-Core and heavy world managers | Built-in [`worlds/` + `world.yml` + `/world` + `/tpworld`](/worlds/standalone-mode/) |
+| **Hub / Lobby Logic** | Bloated all-in-one suites and heavy scripts | Small purpose-built plugins targeting modern Paper API |
+| **Holograms & NPCs** | Live entities or armor stands with AI/collisions | Modern Display entities (`TextDisplay`) or packet NPCs with `entities.ai.enabled: false` |
+| **Lobby State Persistence** | Constant chunk and `playerdata/` disk writes | `storage.world-saving: false` + external storage (Redis/SQL) only if needed |
+| **Legacy Compatibility** | Outdated `1.12 - 1.20.4` builds | Native modern builds (`1.21+`) with `compatibility.legacy.plugin-bytecode-rerouting: false` |
 
 :::tip
-Профілюйте вплив кожного доданого плагіна окремо: спочатку зафіксуйте час `Done (...)!` на чистому Apis, а потім додавайте JAR-файли в `addons/` по одному, відстежуючи приріст часу старту та споживання RAM.
+Measure plugins one by one: log the `Done (...)!` time on bare Apis first, then drop JARs into `addons/` individually to spot heavy startups and RAM spikes.
 :::
